@@ -1,0 +1,8 @@
+{
+  "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "dim": 384,
+  "count": 741,
+  "normalized": true,
+  "text_key": "plot",
+  "source": "movies_dataset.json"
+}

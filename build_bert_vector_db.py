@@ -10,7 +10,7 @@ import os
 
 def build_sentence_bert_vector_db():
     """SentenceBERT 임베딩으로 FAISS 벡터 DB 구축"""
-    print("🔧 SentenceBERT 기반 FAISS 벡터 DB 구축 - 수정 테스트 성공! ✅")
+    print("🔧 SentenceBERT 기반 FAISS 벡터 DB 구축")
     print("=" * 60)
     
     # 임베딩 데이터 로드

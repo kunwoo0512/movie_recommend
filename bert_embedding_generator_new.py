@@ -1,240 +1,312 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """
-SentenceBERT 기반 영화 줄거리 임베딩 생성기
-다국어 SentenceBERT를 사용하여 한국어 쿼리와 영어 줄거리 모두 처리
+SentenceBERT 기반 영화 줄거리 임베딩 생성기 (윈도우 인덱싱 버전)
+- 한국어 쿼리 ↔ 영어(또는 혼합) 줄거리 매칭
+- 문장 분할 후 2~3문장 슬라이딩 윈도우 임베딩
+- L2 정규화 및 제로벡터/NaN 가드
+- 결과: embeddings.npy + metadata.jsonl (FAISS 호환)
 """
 
-import json
-import numpy as np
-import torch
-from sentence_transformers import SentenceTransformer
+"""python bert_embedding_generator_new.py --input movies_dataset.json --output_dir data --window_size 2 --stride 1 --batch_size 16
+1. build_faiss_and_query.py --build 로 FAISS 인덱스 생성
+2. build_faiss_and_query.py --demo_query '검색어' 로 테스트
+
+"""
+
 import os
-from tqdm import tqdm
-import warnings
+import re
+import json
 import time
-warnings.filterwarnings('ignore')
+import argparse
+import warnings
+from typing import List, Dict, Tuple
 
-class SentenceBertEmbeddingGenerator:
-    def __init__(self, model_name="paraphrase-multilingual-MiniLM-L12-v2"):
-        """SentenceBERT 임베딩 생성기 초기화"""
-        print(f"[초기화] SentenceBERT 모델 로딩: {model_name}")
-        print("=" * 60)
-        
-        # GPU 사용 가능 여부 확인
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(f"[장치] 사용 장치: {self.device}")
-        
-        # SentenceBERT 모델 로드
-        try:
-            print("[다운로드] SentenceBERT 모델 다운로드 중... (최초 실행시 시간이 걸릴 수 있습니다)")
-            self.model = SentenceTransformer(model_name, device=self.device)
-            
-            print(f"[성공] SentenceBERT 모델 로드 완료")
-            print(f"[정보] 임베딩 차원: {self.model.get_sentence_embedding_dimension()}")
-            
-        except Exception as e:
-            print(f"[오류] SentenceBERT 모델 로드 실패: {e}")
-            print("[해결책] 인터넷 연결을 확인하고 sentence-transformers 설치를 확인하세요.")
-            print("설치 명령: pip install sentence-transformers")
-            raise
+import numpy as np
+from tqdm import tqdm
+from sentence_transformers import SentenceTransformer
+import torch
+
+warnings.filterwarnings("ignore")
+
+
+# -----------------------------
+# 유틸: 문장 분할 & 윈도우 구성
+# -----------------------------
+
+def split_sentences(text: str) -> List[str]:
+    """외부 라이브러리 없이 가벼운 문장 분할"""
+    if not text:
+        return []
     
-    def get_sentence_embedding(self, text: str):
-        """텍스트를 SentenceBERT 임베딩으로 변환"""
-        try:
-            # SentenceBERT로 임베딩 생성 (자동으로 정규화됨)
-            embedding = self.model.encode(text, convert_to_numpy=True)
-            return embedding.astype('float32')
-            
-        except Exception as e:
-            print(f"[오류] 임베딩 생성 실패: {e}")
-            # 에러 시 영벡터 반환 (384차원 - MiniLM 기본 차원)
-            return np.zeros(384, dtype='float32')
+    # 공백 정돈
+    t = re.sub(r"\s+", " ", text.strip())
     
-    def process_movies_dataset(self, input_file: str = 'movies_dataset.json', 
-                             output_file: str = 'movie_embeddings_bert.json'):
-        """영화 데이터셋의 모든 줄거리를 SentenceBERT 임베딩으로 변환"""
-        print(f"\n[시작] 영화 데이터셋 SentenceBERT 임베딩 생성")
-        print("=" * 60)
+    # 문장 경계 휴리스틱 (간단/경량)
+    sent_boundaries = re.compile(
+        r"""
+        (?<=[\.!\?])\s+       |   # 영문 .!? 뒤 공백
+        (?<=[다요죠음임니니까까]\.)\s+ |   # 한글 흔한 종결 + 마침표
+        (?<=[다요죠음임니니까까])\s+(?=[A-Z가-힣0-9])   # 한글 종결 뒤 공백
+        """,
+        re.VERBOSE
+    )
+    
+    # 너무 긴 줄 대비: 구두점 없으면 대강 120~200자마다 끊기
+    if not re.search(r"[\.!\?]", t) and len(t) > 200:
+        chunks = [t[i:i+180] for i in range(0, len(t), 180)]
+        return [c.strip() for c in chunks if c.strip()]
+    
+    parts = re.split(sent_boundaries, t)
+    sents = [p.strip() for p in parts if p and p.strip()]
+    return sents
+
+def build_windows(sents: List[str], window_size: int = 2, stride: int = 1, max_chars: int = 600) -> List[Tuple[int, int, str]]:
+    """
+    2~3문장 슬라이딩 윈도우.
+    반환: (start_sent_idx, end_sent_idx_exclusive, window_text)
+    """
+    windows = []
+    n = len(sents)
+    if n == 0:
+        return windows
+    
+    for start in range(0, max(1, n - window_size + 1), stride):
+        end = min(n, start + window_size)
+        chunk = " ".join(sents[start:end]).strip()
+        if len(chunk) > max_chars:
+            chunk = chunk[:max_chars]
+        if chunk:
+            windows.append((start, end, chunk))
+    
+    # 만약 문장이 1개뿐이면 최소 1창 확보
+    if not windows and n > 0:
+        chunk = sents[0][:max_chars]
+        windows.append((0, 1, chunk))
+    
+    return windows
+
+
+# -----------------------------
+# 임베딩 래퍼
+# -----------------------------
+
+class SBertEmbedder:
+    def __init__(self, model_name: str, device: str = None, batch_size: int = 32):
+        self.model_name = model_name
+        device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"[모델] {model_name} 로딩 중... (장치: {device})")
+        self.model = SentenceTransformer(model_name, device=device)
+        self.batch_size = batch_size
+        print(f"[완료] 모델 로드 완료 (차원: {self.get_dim()})")
+
+    def encode_texts(self, texts: List[str]) -> Tuple[np.ndarray, List[int]]:
+        """
+        텍스트 리스트 → L2 정규화된 임베딩 (float32)
+        - normalize_embeddings=True 로 내적=코사인
+        - 반환: (valid_embeddings, valid_indices)
+        """
+        if not texts:
+            return np.zeros((0, self.get_dim()), dtype="float32"), []
         
-        # 영화 데이터 로드
+        print(f"[임베딩] {len(texts)}개 텍스트 처리 중...")
+        vecs = self.model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,   # ★ 중요: 정규화
+            batch_size=self.batch_size,
+            show_progress_bar=True
+        ).astype("float32")
+
+        # NaN/Inf/제로 가드
+        valid_mask = (
+            np.isfinite(vecs).all(axis=1) &
+            (np.linalg.norm(vecs, axis=1) >= 1e-6)
+        )
+        
+        if (~valid_mask).any():
+            invalid_count = (~valid_mask).sum()
+            print(f"[경고] 비정상 임베딩 {invalid_count}개 제거 (남은 {valid_mask.sum()}개)")
+            vecs = vecs[valid_mask]
+            valid_indices = [i for i, v in enumerate(valid_mask) if v]
+        else:
+            valid_indices = list(range(len(texts)))
+            
+        return vecs, valid_indices
+
+    def get_dim(self) -> int:
         try:
-            with open(input_file, 'r', encoding='utf-8') as f:
-                movies = json.load(f)
-            print(f"[로드] {len(movies)}개 영화 데이터 로드 완료")
-        except Exception as e:
-            print(f"[오류] 영화 데이터 로드 실패: {e}")
-            return
-        
-        # 임베딩 생성
-        embeddings_data = []
-        successful_count = 0
-        start_time = time.time()
-        
-        print(f"[진행] SentenceBERT 임베딩 생성 중...")
-        print(f"[정보] 예상 소요 시간: {len(movies) * 0.1 / 60:.1f}분 (BERT보다 훨씬 빠름)")
-        
-        # 배치 처리를 위한 텍스트 리스트
-        plots = []
-        movie_infos = []
-        
-        for i, movie in enumerate(movies):
-            title = movie.get('title', f'Movie_{i}')
-            plot = movie.get('plot', '')
+            return int(self.model.get_sentence_embedding_dimension())
+        except Exception:
+            return 384
+
+
+# -----------------------------
+# 메인 파이프라인
+# -----------------------------
+
+def process_dataset(
+    input_json: str,
+    output_dir: str,
+    model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    window_size: int = 2,
+    stride: int = 1,
+    batch_size: int = 32,
+    use_windows: bool = True
+):
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"\n[설정] model={model_name}")
+    print(f"[설정] window_size={window_size}, stride={stride}, batch_size={batch_size}")
+    print(f"[입력] {input_json}")
+    print(f"[출력] {output_dir}")
+
+    # 1) 데이터 로드
+    with open(input_json, "r", encoding="utf-8") as f:
+        movies = json.load(f)
+    assert isinstance(movies, list), "movies_dataset.json은 리스트여야 합니다."
+    print(f"[로드] {len(movies)}편 영화 데이터 로드")
+
+    # 2) 임베딩 생성기 초기화
+    embedder = SBertEmbedder(model_name=model_name, batch_size=batch_size)
+    
+    if use_windows:
+        return _process_with_windows(movies, embedder, output_dir, window_size, stride)
+    else:
+        return _process_full_plots(movies, embedder, output_dir)
+
+def _process_with_windows(movies, embedder, output_dir, window_size, stride):
+    """윈도우 기반 처리"""
+    print(f"[모드] 윈도우 기반 처리 (window_size={window_size}, stride={stride})")
+    
+    # 줄거리 → 문장 → 윈도우
+    all_texts = []
+    all_metadata = []
+    
+    for mi, movie in enumerate(tqdm(movies, desc="윈도우 생성")):
+        title = movie.get("title", f"Movie_{mi}")
+        plot = (movie.get("plot") or "").strip()
+        if not plot:
+            plot = title
             
-            if not plot.strip():
-                print(f"\n[경고] '{title}': 줄거리가 비어있음")
-                plot = title  # 제목을 대신 사용
-            
-            plots.append(plot)
-            movie_infos.append({
-                'title': title,
-                'plot': plot,
-                'year': movie.get('year', ''),
-                'director': movie.get('director', ''),
-                'genres': movie.get('genres', {}),
-                'movie_id': movie.get('movie_id', f'movie_{i}')
+        sents = split_sentences(plot)
+        windows = build_windows(sents, window_size=window_size, stride=stride)
+        
+        for wi, (start, end, text) in enumerate(windows):
+            all_texts.append(text)
+            all_metadata.append({
+                "movie_index": mi,
+                "title": title,
+                "window_index": wi,
+                "start_sent": start,
+                "end_sent": end,
+                "text": text,
+                "year": movie.get("year", ""),
+                "director": movie.get("director", ""),
+                "genres": movie.get("genres", {}),
+                "movie_id": movie.get("movie_id", f"movie_{mi}")
             })
-        
-        # 배치로 임베딩 생성 (훨씬 빠름)
-        print(f"[배치] {len(plots)}개 줄거리 배치 임베딩 생성 중...")
-        try:
-            embeddings = self.model.encode(plots, 
-                                         convert_to_numpy=True, 
-                                         show_progress_bar=True,
-                                         batch_size=32)
-            
-            # 결과 저장
-            for i, (movie_info, embedding) in enumerate(zip(movie_infos, embeddings)):
-                embeddings_data.append({
-                    **movie_info,
-                    'embedding': embedding.tolist()
-                })
-                successful_count += 1
-                
-                # 중간 저장 (100개마다)
-                if (i + 1) % 100 == 0:
-                    elapsed = time.time() - start_time
-                    remaining = (len(movies) - i - 1) * (elapsed / (i + 1))
-                    print(f"\n[진행] {i + 1}/{len(movies)} 완료 ({successful_count}개 성공)")
-                    print(f"[시간] 경과: {elapsed/60:.1f}분, 남은 시간: {remaining/60:.1f}분")
-                    self._save_intermediate(embeddings_data, output_file, i + 1)
-            
-        except Exception as e:
-            print(f"[오류] 배치 임베딩 생성 실패: {e}")
-            # 개별 처리로 폴백
-            print("[폴백] 개별 임베딩 생성으로 전환...")
-            embeddings_data = []
-            
-            for i, movie_info in enumerate(tqdm(movie_infos, desc="개별 임베딩 생성")):
-                try:
-                    embedding = self.get_sentence_embedding(movie_info['plot'])
-                    embeddings_data.append({
-                        **movie_info,
-                        'embedding': embedding.tolist()
-                    })
-                    successful_count += 1
-                    
-                except Exception as e:
-                    print(f"\n[오류] '{movie_info['title']}' 처리 실패: {e}")
-                    continue
-        
-        # 최종 저장
-        try:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(embeddings_data, f, ensure_ascii=False, indent=2)
-            
-            total_time = time.time() - start_time
-            print(f"\n[완료] SentenceBERT 임베딩 생성 완료!")
-            print(f"[결과] 총 {successful_count}/{len(movies)}개 영화 처리")
-            print(f"[시간] 총 소요 시간: {total_time/60:.1f}분")
-            print(f"[저장] {output_file}에 저장됨")
-            print(f"[크기] 파일 크기: {os.path.getsize(output_file) / (1024*1024):.1f} MB")
-            
-        except Exception as e:
-            print(f"[오류] 파일 저장 실패: {e}")
     
-    def _save_intermediate(self, data, filename, count):
-        """중간 결과 저장"""
-        backup_name = f"{filename}.backup_{count}"
-        try:
-            with open(backup_name, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            print(f"[백업] {backup_name} 저장 완료")
-        except Exception as e:
-            print(f"[오류] 백업 저장 실패: {e}")
+    print(f"[통계] 총 {len(all_texts)}개 윈도우 생성")
     
-    def test_embedding_quality(self, test_queries=None):
-        """임베딩 품질 테스트"""
-        if test_queries is None:
-            test_queries = [
-                "꿈과 현실을 오가는 영화",
-                "주인공이 초반에 실패하지만 결국 성공하는 영화",
-                "로봇과 인간의 사랑 이야기",
-                "time travel movie",
-                "love story between human and AI",
-                "matrix",
-                "inception"
-            ]
-        
-        print(f"\n[테스트] SentenceBERT 임베딩 품질 테스트")
-        print("=" * 60)
-        
-        for query in test_queries:
-            print(f"\n쿼리: '{query}'")
-            start_time = time.time()
-            embedding = self.get_sentence_embedding(query)
-            end_time = time.time()
+    # 임베딩 생성
+    embeddings, valid_indices = embedder.encode_texts(all_texts)
+    
+    # 유효한 메타데이터만 유지
+    valid_metadata = [all_metadata[i] for i in valid_indices]
+    
+    # 저장 (FAISS 호환 형식)
+    np.save(os.path.join(output_dir, "embeddings.npy"), embeddings)
+    
+    with open(os.path.join(output_dir, "metadata.jsonl"), "w", encoding="utf-8") as f:
+        for meta in valid_metadata:
+            f.write(json.dumps(meta, ensure_ascii=False) + "\n")
+    
+    print(f"[저장] embeddings.npy: {embeddings.shape}")
+    print(f"[저장] metadata.jsonl: {len(valid_metadata)}개 항목")
+
+def _process_full_plots(movies, embedder, output_dir):
+    """전체 줄거리 기반 처리 (기존 방식)"""
+    print(f"[모드] 전체 줄거리 기반 처리")
+    
+    all_texts = []
+    all_metadata = []
+    
+    for mi, movie in enumerate(movies):
+        title = movie.get("title", f"Movie_{mi}")
+        plot = (movie.get("plot") or "").strip()
+        if not plot:
+            plot = title
             
-            print(f"임베딩 차원: {embedding.shape}")
-            print(f"임베딩 범위: [{embedding.min():.3f}, {embedding.max():.3f}]")
-            print(f"임베딩 L2 노름: {np.linalg.norm(embedding):.3f}")
-            print(f"생성 시간: {(end_time - start_time)*1000:.1f}ms")
+        all_texts.append(plot)
+        all_metadata.append({
+            "movie_index": mi,
+            "title": title,
+            "plot": plot,
+            "year": movie.get("year", ""),
+            "director": movie.get("director", ""),
+            "genres": movie.get("genres", {}),
+            "movie_id": movie.get("movie_id", f"movie_{mi}")
+        })
+    
+    # 임베딩 생성
+    embeddings, valid_indices = embedder.encode_texts(all_texts)
+    
+    # 유효한 메타데이터만 유지
+    valid_metadata = [all_metadata[i] for i in valid_indices]
+    
+    # 저장 (FAISS 호환 형식)
+    np.save(os.path.join(output_dir, "embeddings.npy"), embeddings)
+    
+    with open(os.path.join(output_dir, "metadata.jsonl"), "w", encoding="utf-8") as f:
+        for meta in valid_metadata:
+            f.write(json.dumps(meta, ensure_ascii=False) + "\n")
+    
+    print(f"[저장] embeddings.npy: {embeddings.shape}")
+    print(f"[저장] metadata.jsonl: {len(valid_metadata)}개 항목")
+
+
+# -----------------------------
+# CLI
+# -----------------------------
 
 def main():
-    """메인 실행 함수"""
+    parser = argparse.ArgumentParser(description="SentenceBERT 영화 줄거리 임베딩 생성기")
+    parser.add_argument("--input", type=str, default="movies_dataset.json", help="입력 JSON 경로")
+    parser.add_argument("--output_dir", type=str, default="data", help="출력 디렉토리")
+    parser.add_argument("--model", type=str, default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", help="SentenceBERT 모델명")
+    parser.add_argument("--window_size", type=int, default=2, help="윈도우 문장 수 (2~3 권장)")
+    parser.add_argument("--stride", type=int, default=1, help="슬라이딩 스트라이드")
+    parser.add_argument("--batch_size", type=int, default=32, help="임베딩 배치 크기")
+    parser.add_argument("--no_windows", action="store_true", help="윈도우 모드 비활성화 (전체 줄거리 사용)")
+    
+    args = parser.parse_args()
+    
+    print("🎬 SentenceBERT 기반 영화 임베딩 생성기")
+    print("=" * 60)
+    
     try:
-        print("🎬 SentenceBERT 기반 영화 임베딩 생성기")
-        print("=" * 60)
-        print("이 도구는 영화 줄거리를 SentenceBERT 임베딩으로 변환합니다.")
-        print("• paraphrase-multilingual-MiniLM-L12-v2 사용 (한국어 + 영어 지원)")
-        print("• 문장 의미 임베딩 특화 모델")
-        print("• 기존 BERT [CLS]보다 훨씬 높은 의미 유사도 성능")
-        print("• 배치 처리로 빠른 속도")
-        print()
+        process_dataset(
+            input_json=args.input,
+            output_dir=args.output_dir,
+            model_name=args.model,
+            window_size=args.window_size,
+            stride=args.stride,
+            batch_size=args.batch_size,
+            use_windows=not args.no_windows
+        )
         
-        # SentenceBERT 임베딩 생성기 초기화
-        generator = SentenceBertEmbeddingGenerator()
+        print("\n✅ 임베딩 생성 완료!")
+        print("\n다음 단계:")
+        print("1. build_faiss_and_query.py --build 로 FAISS 인덱스 생성")
+        print("2. build_faiss_and_query.py --demo_query '검색어' 로 테스트")
         
-        # 임베딩 품질 테스트
-        generator.test_embedding_quality()
-        
-        # 사용자 확인
-        print("\n" + "="*60)
-        response = input("영화 데이터셋 전체를 SentenceBERT 임베딩으로 변환하시겠습니까? (y/n): ")
-        
-        if response.lower() in ['y', 'yes', '예', 'ㅇ']:
-            # 전체 데이터셋 처리
-            generator.process_movies_dataset()
-            
-            print("\n🎉 임베딩 생성 완료!")
-            print("다음 단계:")
-            print("1. build_bert_vector_db.py 실행하여 FAISS 인덱스 생성")
-            print("2. bert_movie_recommender_new.py로 검색 테스트")
-            print("\n주요 개선사항:")
-            print("• 기존 BERT [CLS] → SentenceBERT 문장 임베딩")
-            print("• 의미 유사도 검색 성능 대폭 향상")
-            print("• 'matrix' 검색시 매트릭스 영화 정확히 검색됨")
-            
-        else:
-            print("작업을 취소했습니다.")
-            
     except Exception as e:
-        print(f"[오류] 시스템 오류: {e}")
-        print("\n[해결책]")
-        print("1. sentence-transformers 라이브러리 설치:")
-        print("   pip install sentence-transformers")
-        print("2. 인터넷 연결 확인 (모델 다운로드 필요)")
-        print("3. 메모리 부족시 시스템 재시작 후 재실행")
+        print(f"\n❌ 오류 발생: {e}")
+        print("\n해결 방법:")
+        print("1. sentence-transformers 설치: pip install sentence-transformers")
+        print("2. 메모리 부족 시 --batch_size 줄이기")
+        print("3. GPU 메모리 부족 시 CPU 사용")
 
 if __name__ == "__main__":
     main()

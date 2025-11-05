@@ -126,7 +126,7 @@ class SentenceBertMovieRecommender:
 - 영화의 주요 테마가 요청과 부합하는가?
 - 부분적 유사성이 아닌 명확한 일치인가?
 
-**최종 점수: X/10** (X는 1-10 사이 숫자)
+**점수: X/10** (X는 1-10 사이 숫자)
 
 6점 이상만 추천 가능합니다."""
 
@@ -136,7 +136,7 @@ class SentenceBertMovieRecommender:
                         {"role": "system", "content": "당신은 영화 추천 전문가입니다."},
                         {"role": "user", "content": prompt}
                     ],
-                    max_tokens=150,
+                    max_tokens=200,  # 500 → 200으로 줄임 (간단한 프롬프트)
                     temperature=0.3
                 )
                 
@@ -145,10 +145,13 @@ class SentenceBertMovieRecommender:
                 # 점수 추출
                 def extract_score(text):
                     patterns = [
+                        r'점수:\s*(\d+(?:\.\d+)?)',  # "점수: X" 형식 추가
                         r'최종\s*점수[:\s]*(\d+(?:\.\d+)?)',
                         r'점수[:\s]*(\d+(?:\.\d+)?)',
                         r'(\d+(?:\.\d+)?)/10',
-                        r'(\d+(?:\.\d+)?)점'
+                        r'(\d+(?:\.\d+)?)점',
+                        r'(\d+(?:\.\d+)?)\s*사이로',  # "1~10 사이로" 패턴
+                        r'(\d+(?:\.\d+)?)\s*$'  # 마지막에 숫자만 있는 경우
                     ]
                     
                     for pattern in patterns:
