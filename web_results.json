@@ -1,0 +1,73 @@
+{
+  "query": "좀비",
+  "total_results": 5,
+  "llm_filtered": true,
+  "timestamp": "2025-11-06 03:14:05",
+  "movies": [
+    {
+      "rank": 1,
+      "title": "World War Z",
+      "year": "2013",
+      "director": "Marc Forster",
+      "plot": "",
+      "score": 0.509365975856781,
+      "poster_url": "/static/posters/World_War_Z.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"World War Z\"의 줄거리는 좀비 바이러스가 세계적으로 확산되어 인류가 좀비와 싸우는 내용을 다룹니다. 특히 주인공이 좀비들의 습격을 피해 안전한 곳을 찾아가는 과정이 상세히 묘사되어 있습니다. 이는 '좀비'라는 검색어의 핵심 테마와 일치하며, 사용자가 원하는 좀비 관련 영화를 찾을 때 적합한 선택이 될 것입니다."
+      }
+    },
+    {
+      "rank": 2,
+      "title": "Zombadings 1: Patayin sa Shokot si Remington",
+      "year": "2011",
+      "director": "Jade Castro",
+      "plot": "",
+      "score": 0.46711212396621704,
+      "poster_url": "/static/posters/Zombadings_1:_Patayin_sa_Shokot_si_Remington.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "줄거리에서 주인공이 \"좀비 바이러스에 감염되어 좀비로 변하는\" 내용이 나타나며, 주인공이 좀비로 변하면서 \"주변 사람들에게 재미있는 행동을 하도록 유도하는\" 설정이 있습니다. 또한, 영화의 전체적인 분위기가 코미디 요소를 강조하면서도 좀비 테마를 다루고 있어, '좀비'라는 검색어와 관련이 깊습니다."
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Ziam",
+      "year": "2025",
+      "director": "Kulp Kaljareuk",
+      "plot": "",
+      "score": 0.4583367109298706,
+      "poster_url": "/static/posters/Ziam.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "줄거리에는 좀비와 관련된 내용이 구체적으로 언급되어 있습니다. \"Ziam\"은 좀비 바이러스에 감염된 사람들이 인류를 위협하는 세계를 배경으로 합니다. 특히 \"생존자들이 좀비들과의 전투를 벌이며 안전한 구역을 찾아 나서는\" 부분은 좀비와 관련된 전형적인 장면을 보여주고 있습니다."
+      }
+    },
+    {
+      "rank": 4,
+      "title": "Terrifier 2",
+      "year": "2022",
+      "director": "Damien Leone",
+      "plot": "",
+      "score": 0.4579833149909973,
+      "poster_url": "/static/posters/Terrifier_2.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "\"Terrifier 2\"의 줄거리에는 검색어인 '좀비'와 관련된 내용은 나오지 않지만, 이 영화는 공포 장르의 작품으로, 좀비와 유사한 공포 요소를 다루고 있습니다."
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Train to Busan",
+      "year": "2016",
+      "director": "Yeon Sang-ho",
+      "plot": "",
+      "score": 0.4465702772140503,
+      "poster_url": "/static/posters/Train_to_Busan.jpg",
+      "llm_analysis": {
+        "score": 10,
+        "reason": "영화 \"Train to Busan\"의 줄거리는 검색어 \"좀비\"의 핵심 키워드와 완벽하게 부합합니다. 영화는 좀비 바이러스가 전국으로 퍼지면서 사람들이 좀비로 변하고, 기차 안에서 생존을 위해 사투를 벌이는 내용을 다룹니다."
+      }
+    }
+  ]
+}
