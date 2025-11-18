@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import argparse, json, re
+import argparse, json, re, os, sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import time
+from dotenv import load_dotenv
 
 import numpy as np
 import faiss
+
+# Windows 콘솔 UTF-8 출력 설정
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+# 환경변수 로드
+load_dotenv()
+
+# 웹 UI용 영화 설명 데이터 저장 (전역 변수)
+movie_explanations = []
 
 def load_metadata(jsonl_path: Path) -> List[Dict[str, Any]]:
     metas = []
@@ -174,14 +187,14 @@ class LLMMovieFilter:
                         'llm_score': judgment['score'],
                         'llm_reason': judgment['reason']
                     })
-                    print(f"    ✅ PASS (점수: {judgment['score']}/10)")
+                    print(f"    [PASS] (점수: {judgment['score']}/10)")
                 else:
-                    print(f"    ❌ FAIL (점수: {judgment['score']}/10) - {judgment['reason']}")
+                    print(f"    [FAIL] (점수: {judgment['score']}/10) - {judgment['reason']}")
                 
                 time.sleep(0.5)  # API 요청 간격
                 
             except Exception as e:
-                print(f"    ⚠️ 오류: {e}")
+                print(f"    [오류] {e}")
                 filtered_movies.append(movie)
         
         print(f"[LLM 필터링 완료] {len(movies)} → {len(filtered_movies)}개")
@@ -298,7 +311,7 @@ def format_results_for_web(movies: List[Dict], query: str, llm_filtered: bool = 
             "llm_analysis": {
                 "score": movie.get('llm_score'),
                 "reason": movie.get('llm_reason')
-            } if llm_filtered and 'llm_score' in movie else None
+            } if llm_filtered and ('llm_score' in movie or 'llm_reason' in movie) else None
         }
         formatted_results["movies"].append(formatted_movie)
     
@@ -316,38 +329,38 @@ def save_results_for_web(results: Dict, output_file: str = "web_results.json"):
 
 
 def print_results(sims, ids, metas: List[Dict[str, Any]]):
+    global movie_explanations
+    movie_explanations.clear()  # 새로운 결과로 초기화
+    
     for qi in range(ids.shape[0]):
         print(f"\n[Query {qi}] Top-{ids.shape[1]} results")
         for rank, (sid, sim) in enumerate(zip(ids[qi], sims[qi]), start=1):
             # sid는 이제 집계된 영화의 인덱스
             m = metas[int(sid)]
-            print(f"  {rank:>2}. score={sim:.4f} | {m.get('title')} ({m.get('year')}) | dir={m.get('director')}")
+            title = m.get('title')
+            print(f"  {rank:>2}. score={sim:.4f} | {title} ({m.get('year')}) | dir={m.get('director')}")
+            
+            # 디버깅: 메타데이터 키들 확인
+            print(f"      [DEBUG] 메타데이터 키: {list(m.keys())}")
+            
+            # LLM 분석 결과가 있으면 movie_explanations에 저장
+            if 'llm_reason' in m and m['llm_reason']:
+                movie_explanations.append([title, m['llm_reason']])
+                print(f"      [DEBUG] 설명 저장됨: {title}")
+            else:
+                print(f"      [DEBUG] LLM 설명 없음: llm_reason={m.get('llm_reason', 'KEY_NOT_FOUND')}")
 
 def interactive_search():
     """대화형 검색 모드"""
     import os
     from dotenv import load_dotenv
-    from weighted_search_utils import get_weighted_helper
     
     # 환경변수 로드
     load_dotenv()
     openai_key = os.getenv('OPENAI_API_KEY')
     
     print("=" * 60)
-    print("🎬 영화 추천 시스템")
-    print("=" * 60)
-    print("1. 기존 검색 (청킹 기반 + LLM 필터링)")
-    print("2. 가중치 조절 검색 (분리 임베딩)")
-    print("=" * 60)
-    
-    search_mode = input("검색 모드를 선택하세요 (1 또는 2): ").strip()
-    
-    if search_mode == "2":
-        weighted_interactive_search()
-        return
-    
-    print("=" * 60)
-    print("🎬 기존 영화 추천 시스템 (SentenceBERT + LLM 필터링)")
+    print("🎬 영화 추천 시스템 (SentenceBERT + LLM 필터링)")
     print("=" * 60)
     print("• 20개 후보 검색 → LLM 검증 → 최종 5개 추천")
     print("• 'quit' 또는 'exit' 입력시 종료")
@@ -413,6 +426,10 @@ def interactive_search():
                 print("❌ 검색어를 입력해주세요.")
                 continue
             
+            # 새로운 검색 시작 시 이전 설명 데이터 초기화
+            global movie_explanations
+            movie_explanations.clear()
+            
             print(f"\n🔍 '{query}' 검색 중...")
             
             # 쿼리 임베딩 생성
@@ -476,6 +493,9 @@ def interactive_search():
                     llm_reason = movie.get('llm_reason', '')
                     print(f"   LLM 점수: {llm_score}/10")
                     print(f"   추천 이유: {llm_reason}")
+                    
+                    # 웹 UI용 설명 데이터 저장
+                    movie_explanations.append([title, llm_reason])
             
             # 웹 연동용 결과 저장
             web_results = format_results_for_web(
@@ -691,17 +711,18 @@ def main():
             print(f"[웹 연동] 포스터 경로: /static/posters/")
             print(f"[웹 연동] 흐름곡선 데이터도 추가 가능")
 
-def weighted_interactive_search():
-    """가중치 조절 대화형 검색"""
-    print("=" * 60)
-    print("🎭 가중치 조절 영화 검색 시스템")
-    print("=" * 60)
-    print("• 이 기능은 movie_similarity_finder.py에서 이용하세요")
-    print("• 현재는 기본 청킹 검색만 지원합니다")
-    print("=" * 60)
-    
-    print("💡 movie_similarity_finder.py를 실행하여 가중치 조절 검색을 이용하세요!")
-    return
+def get_movie_explanation(movie_title: str) -> Optional[str]:
+    """영화 제목으로 추천 이유 검색"""
+    global movie_explanations
+    for title, reason in movie_explanations:
+        if title == movie_title:
+            return reason
+    return None
+
+def get_all_movie_explanations() -> List[List[str]]:
+    """모든 영화 설명 데이터 반환"""
+    global movie_explanations
+    return movie_explanations.copy()
 
 if __name__ == '__main__':
     main()

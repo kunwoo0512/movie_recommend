@@ -127,9 +127,6 @@ function createMovieCard(movie, rank) {
     const plot = movie.plot || '줄거리 정보가 없습니다.';
     const shortPlot = plot.length > 150 ? plot.substring(0, 150) + '...' : plot;
     
-    // LLM 분석 여부 확인
-    const hasLLMAnalysis = movie.llm_analysis && movie.llm_analysis.reason;
-    
     card.innerHTML = `
         <div class="movie-poster" onclick="goToMovieDetail(${rank})">
             <i class="fas fa-film"></i>
@@ -140,11 +137,9 @@ function createMovieCard(movie, rank) {
                     <h3>${movie.title || 'Unknown Title'}</h3>
                     <div class="movie-year">${movie.year || 'Unknown Year'}</div>
                 </div>
-                ${hasLLMAnalysis ? `
-                    <button class="explain-btn" onclick="showExplanation(${rank})">
-                        <i class="fas fa-lightbulb"></i> 설명
-                    </button>
-                ` : ''}
+                <button class="explain-btn" onclick="showExplanation(${rank})">
+                    <i class="fas fa-lightbulb"></i> 설명
+                </button>
             </div>
             <div class="movie-plot">${shortPlot}</div>
         </div>
@@ -158,7 +153,7 @@ function goToMovieDetail(rank) {
     window.location.href = `/movie/${rank}`;
 }
 
-// LLM 설명 모달 표시
+// LLM 설명 모달 표시 (수정: JSON 데이터에서 직접 가져오기)
 async function showExplanation(rank) {
     // 모달 열기
     explanationModal.classList.remove('hidden');
@@ -169,27 +164,16 @@ async function showExplanation(rank) {
     const movie = currentSearchResults.movies[rank - 1];
     modalTitle.textContent = `"${movie.title}" 추천 이유`;
     
-    try {
-        // LLM 설명이 이미 있으면 바로 표시
-        if (movie.llm_analysis && movie.llm_analysis.reason) {
-            showModalExplanation(movie.llm_analysis.reason);
-            return;
-        }
-        
-        // 서버에서 설명 가져오기
-        const response = await fetch(`/explain/${rank}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || '설명을 불러올 수 없습니다.');
-        }
-        
-        showModalExplanation(data.explanation);
-        
-    } catch (error) {
-        console.error('설명 로드 오류:', error);
-        showModalExplanation(`설명을 불러오는 중 오류가 발생했습니다: ${error.message}`);
+    // 검색 결과 JSON에서 직접 설명 가져오기
+    let explanation = '설명 정보가 없습니다.';
+    
+    if (movie.llm_analysis && movie.llm_analysis.reason) {
+        explanation = movie.llm_analysis.reason;
+    } else {
+        console.warn('LLM 분석 데이터가 없습니다:', movie);
     }
+    
+    showModalExplanation(explanation);
 }
 
 // 모달에 설명 표시
