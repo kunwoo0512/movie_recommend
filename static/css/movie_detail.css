@@ -1,0 +1,343 @@
+/* 영화 상세 페이지 전용 스타일 */
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #764ba2;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    transition: background 0.3s ease;
+}
+
+.nav-link:hover {
+    background: rgba(118, 75, 162, 0.1);
+}
+
+/* 상세 페이지 메인 컨텐츠 */
+.detail-content {
+    flex: 1;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* 브레드크럼 */
+.breadcrumb {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    transition: background 0.3s ease;
+}
+
+.back-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.breadcrumb-separator {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-query {
+    color: rgba(255, 255, 255, 0.9);
+    font-style: italic;
+}
+
+/* 영화 상세 카드 */
+.movie-detail-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 600px;
+}
+
+.movie-poster-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+.movie-poster-large {
+    width: 200px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.movie-rating {
+    text-align: center;
+}
+
+.rating-badge {
+    background: #764ba2;
+    color: white;
+    padding: 0.8rem 1.2rem;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.rating-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.movie-info-section {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* 영화 제목 섹션 */
+.movie-title-section {
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 1.5rem;
+}
+
+.movie-title {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.movie-metadata {
+    display: flex;
+    gap: 2rem;
+}
+
+.movie-year,
+.movie-director {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.movie-year i,
+.movie-director i {
+    color: #764ba2;
+}
+
+/* LLM 분석 섹션 */
+.llm-analysis {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+}
+
+.llm-analysis h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+}
+
+.analysis-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.llm-score {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+}
+
+.score-label {
+    font-weight: 500;
+}
+
+.score-value {
+    background: white;
+    color: #764ba2;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-weight: bold;
+}
+
+.analysis-text {
+    line-height: 1.6;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 줄거리 섹션 */
+.plot-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.plot-section h3 i {
+    color: #764ba2;
+}
+
+.plot-text {
+    line-height: 1.7;
+    color: #555;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 액션 버튼들 */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.action-btn.primary {
+    background: #764ba2;
+    color: white;
+    flex: 1;
+}
+
+.action-btn.primary:hover {
+    background: #5a3a7a;
+    transform: translateY(-2px);
+}
+
+.action-btn.secondary {
+    background: transparent;
+    color: #764ba2;
+    border: 2px solid #764ba2;
+}
+
+.action-btn.secondary:hover {
+    background: #764ba2;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .detail-content {
+        padding: 1rem;
+    }
+
+    .movie-detail-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .movie-poster-section {
+        padding: 1.5rem;
+    }
+
+    .movie-poster-large {
+        width: 150px;
+        height: 225px;
+        font-size: 3rem;
+    }
+
+    .movie-info-section {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .movie-title {
+        font-size: 2rem;
+    }
+
+    .movie-metadata {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .llm-analysis {
+        padding: 1.5rem;
+    }
+
+    .llm-score {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .breadcrumb {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+
+    .nav {
+        display: none;
+    }
+}

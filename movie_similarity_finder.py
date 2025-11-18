@@ -213,41 +213,145 @@ def main():
             )
             recommender.display_similar_movies(similar_movies, args.movie)
         else:
-            # 대화형 모드
+            # 대화형 모드 선택
             print("\n🎬 영화 유사도 추천 시스템")
             print("=" * 50)
-            print("• 영화 제목을 입력하면 유사한 영화를 추천해드립니다")
-            print("• 'quit' 입력시 종료")
+            print("1. 기존 추천 (멀티모달 고정 가중치)")
+            print("2. 가중치 조절 추천 (분리 임베딩)")
             print("=" * 50)
             
-            while True:
-                try:
-                    movie_title = input("\n🔍 영화 제목을 입력하세요 > ").strip()
-                    
-                    if movie_title.lower() in ['quit', 'exit', '종료']:
-                        print("👋 시스템을 종료합니다.")
-                        break
-                    
-                    if not movie_title:
-                        print("❌ 영화 제목을 입력해주세요.")
-                        continue
-                    
-                    # 유사 영화 검색
-                    similar_movies = recommender.get_similar_movies(movie_title, top_k=10)
-                    recommender.display_similar_movies(similar_movies, movie_title)
-                    
-                except ValueError as e:
-                    print(f"❌ {e}")
-                except KeyboardInterrupt:
-                    print("\n👋 시스템을 종료합니다.")
-                    break
-                except Exception as e:
-                    print(f"❌ 오류 발생: {e}")
-    
+            mode = input("추천 모드를 선택하세요 (1 또는 2): ").strip()
+            
+            if mode == "2":
+                weighted_similarity_search(args.data_dir)
+            else:
+                basic_similarity_search(recommender)
+                
     except Exception as e:
         print(f"❌ 시스템 초기화 실패: {e}")
         import traceback
         traceback.print_exc()
+
+def basic_similarity_search(recommender):
+    """기존 유사도 검색"""
+    print("\n🎬 기존 영화 유사도 추천")
+    print("=" * 50)
+    print("• 영화 제목을 입력하면 유사한 영화를 추천해드립니다")
+    print("• 'quit' 입력시 종료")
+    print("=" * 50)
+    
+    while True:
+        try:
+            movie_title = input("\n🔍 영화 제목을 입력하세요 > ").strip()
+            
+            if movie_title.lower() in ['quit', 'exit', '종료']:
+                print("👋 시스템을 종료합니다.")
+                break
+            
+            if not movie_title:
+                print("❌ 영화 제목을 입력해주세요.")
+                continue
+            
+            # 유사 영화 검색
+            similar_movies = recommender.get_similar_movies(movie_title, top_k=10)
+            recommender.display_similar_movies(similar_movies, movie_title)
+            
+        except ValueError as e:
+            print(f"❌ {e}")
+        except KeyboardInterrupt:
+            print("\n👋 시스템을 종료합니다.")
+            break
+        except Exception as e:
+            print(f"❌ 오류 발생: {e}")
+
+def weighted_similarity_search(data_dir):
+    """가중치 조절 유사도 검색 (OpenAI 임베딩 기반)"""
+    from weighted_search_utils_openai import get_openai_weighted_helper
+    
+    print("\n🎭 가중치 조절 영화 유사도 추천 (OpenAI)")
+    print("=" * 50)
+    print("• 영화 제목을 입력하면 유사한 영화를 추천해드립니다")
+    print("• 실시간 가중치 조절 (plot/flow/genre)")
+    print("• OpenAI 임베딩 (1536차원) 사용")
+    print("• 'quit' 입력시 종료")
+    print("=" * 50)
+    
+    # OpenAI 가중치 헬퍼 초기화
+    helper = get_openai_weighted_helper()
+    if not helper.load_separated_embeddings():
+        print("❌ OpenAI 분리된 임베딩을 로드할 수 없습니다.")
+        print("먼저 python create_separated_embeddings_openai.py 를 실행하세요.")
+        return
+    
+    print("✅ OpenAI 가중치 조절 시스템 로드 완료!")
+    
+    while True:
+        try:
+            print("\n" + "="*50)
+            movie_title = input("🔍 영화 제목을 입력하세요: ").strip()
+            
+            if movie_title.lower() in ['quit', 'exit', '종료']:
+                print("👋 시스템을 종료합니다.")
+                break
+                
+            if not movie_title:
+                print("❌ 영화 제목을 입력해주세요.")
+                continue
+            
+            # 가중치 입력 (선택사항)
+            print("\n⚖️ 가중치 설정 (엔터키로 기본값 사용):")
+            w_plot_input = input("  📝 줄거리 가중치 [기본값: 0.6]: ").strip()
+            w_flow_input = input("  📈 흐름곡선 가중치 [기본값: 0.3]: ").strip()
+            w_genre_input = input("  🎭 장르 가중치 [기본값: 0.1]: ").strip()
+            
+            # 가중치 파싱
+            w_plot = float(w_plot_input) if w_plot_input else None
+            w_flow = float(w_flow_input) if w_flow_input else None
+            w_genre = float(w_genre_input) if w_genre_input else None
+            
+            # 유사 영화 검색
+            results = helper.find_similar_movies_weighted(
+                target_movie_title=movie_title,
+                w_plot=w_plot,
+                w_flow=w_flow, 
+                w_genre=w_genre,
+                top_k=10
+            )
+            
+            if not results:
+                print("❌ 해당 영화를 찾을 수 없거나 유사한 영화가 없습니다.")
+                continue
+            
+            # 결과 출력
+            print(f"\n🔎 '{movie_title}'와 유사한 영화들")
+            print("="*80)
+            
+            for movie in results:
+                print(f"\n🎬 순위 {movie['rank']}: {movie['title']} ({movie['year']})")
+                print(f"   감독: {movie['director']}")
+                print(f"   🔢 유사도: {movie['similarity_score']:.4f}")
+                comp_scores = movie['component_scores']
+                print(f"   📊 세부 점수: 줄거리={comp_scores['plot']:.3f}, "
+                      f"흐름={comp_scores['flow']:.3f}, 장르={comp_scores['genre']:.3f}")
+                
+                # 장르 정보 (상위 3개)
+                genres = movie.get('genres', {})
+                if genres:
+                    top_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)[:3]
+                    genre_str = ", ".join([f"{genre}({score})" for genre, score in top_genres])
+                    print(f"   🎭 주요 장르: {genre_str}")
+            
+            weights_used = results[0]['weights_used']
+            print(f"\n💡 사용된 가중치: 줄거리={weights_used['plot']:.2f}, "
+                  f"흐름={weights_used['flow']:.2f}, 장르={weights_used['genre']:.2f}")
+                    
+        except ValueError as e:
+            print(f"❌ 가중치 오류: {e}. 0.0~1.0 사이의 숫자를 입력하세요.")
+        except KeyboardInterrupt:
+            print("\n👋 시스템을 종료합니다.")
+            break
+        except Exception as e:
+            print(f"❌ 검색 실패: {e}")
 
 if __name__ == "__main__":
     main()

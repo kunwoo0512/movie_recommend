@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ movie.title }} - 영화 상세 정보</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/movie_detail.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-film"></i>
+                    <span>MovieFinder</span>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>홈으로</span>
+                    </a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- 영화 상세 정보 -->
+        <main class="detail-content">
+            <div class="detail-container">
+                <!-- 뒤로가기 -->
+                <div class="breadcrumb">
+                    <a href="javascript:history.back()" class="back-link">
+                        <i class="fas fa-arrow-left"></i>
+                        검색 결과로 돌아가기
+                    </a>
+                    {% if query %}
+                    <span class="breadcrumb-separator">→</span>
+                    <span class="search-query">"{{ query }}" 검색 결과</span>
+                    {% endif %}
+                </div>
+
+                <!-- 영화 정보 카드 -->
+                <div class="movie-detail-card">
+                    <div class="movie-poster-section">
+                        <div class="movie-poster-large">
+                            <i class="fas fa-film"></i>
+                        </div>
+                        <div class="movie-rating">
+                            <div class="rating-badge">
+                                <i class="fas fa-star"></i>
+                                <span>{{ "%.1f"|format(movie.score * 10) }}/10</span>
+                            </div>
+                            <p class="rating-label">유사도 점수</p>
+                        </div>
+                    </div>
+
+                    <div class="movie-info-section">
+                        <div class="movie-title-section">
+                            <h1 class="movie-title">{{ movie.title }}</h1>
+                            <div class="movie-metadata">
+                                <span class="movie-year">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ movie.year }}
+                                </span>
+                                <span class="movie-director">
+                                    <i class="fas fa-user"></i>
+                                    {{ movie.director }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- LLM 분석 -->
+                        {% if movie.llm_analysis and movie.llm_analysis.reason %}
+                        <div class="llm-analysis">
+                            <h3>
+                                <i class="fas fa-lightbulb"></i>
+                                왜 이 영화가 추천되었을까요?
+                            </h3>
+                            <div class="analysis-content">
+                                <div class="llm-score">
+                                    <span class="score-label">LLM 분석 점수:</span>
+                                    <span class="score-value">{{ movie.llm_analysis.score }}/10</span>
+                                </div>
+                                <p class="analysis-text">{{ movie.llm_analysis.reason }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 줄거리 -->
+                        <div class="plot-section">
+                            <h3>
+                                <i class="fas fa-book"></i>
+                                줄거리
+                            </h3>
+                            <p class="plot-text">{{ movie.plot or '줄거리 정보가 없습니다.' }}</p>
+                        </div>
+
+                        <!-- 액션 버튼들 -->
+                        <div class="action-buttons">
+                            <button class="action-btn primary" onclick="searchSimilar()">
+                                <i class="fas fa-search"></i>
+                                비슷한 영화 더 찾기
+                            </button>
+                            <button class="action-btn secondary" onclick="shareMovie()">
+                                <i class="fas fa-share"></i>
+                                공유하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
+        </footer>
+    </div>
+
+    <script>
+        // 비슷한 영화 검색
+        function searchSimilar() {
+            const movieTitle = "{{ movie.title }}";
+            window.location.href = `/?search=${encodeURIComponent(movieTitle)}`;
+        }
+
+        // 영화 공유
+        function shareMovie() {
+            const movieTitle = "{{ movie.title }}";
+            const movieYear = "{{ movie.year }}";
+            const text = `"${movieTitle} (${movieYear})" - MovieFinder에서 추천받은 영화입니다!`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: movieTitle,
+                    text: text,
+                    url: window.location.href
+                });
+            } else {
+                // 클립보드에 복사
+                navigator.clipboard.writeText(text + ' ' + window.location.href).then(() => {
+                    alert('링크가 클립보드에 복사되었습니다!');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

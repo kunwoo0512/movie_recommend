@@ -1,0 +1,13 @@
+{
+  "genre_types": [
+    "action",
+    "comedy",
+    "drama",
+    "horror",
+    "romance",
+    "sci_fi",
+    "thriller"
+  ],
+  "total_movies": 741,
+  "embedding_dim": 384
+}

@@ -327,13 +327,27 @@ def interactive_search():
     """대화형 검색 모드"""
     import os
     from dotenv import load_dotenv
+    from weighted_search_utils import get_weighted_helper
     
     # 환경변수 로드
     load_dotenv()
     openai_key = os.getenv('OPENAI_API_KEY')
     
     print("=" * 60)
-    print("🎬 영화 추천 시스템 (SentenceBERT + LLM 필터링)")
+    print("🎬 영화 추천 시스템")
+    print("=" * 60)
+    print("1. 기존 검색 (청킹 기반 + LLM 필터링)")
+    print("2. 가중치 조절 검색 (분리 임베딩)")
+    print("=" * 60)
+    
+    search_mode = input("검색 모드를 선택하세요 (1 또는 2): ").strip()
+    
+    if search_mode == "2":
+        weighted_interactive_search()
+        return
+    
+    print("=" * 60)
+    print("🎬 기존 영화 추천 시스템 (SentenceBERT + LLM 필터링)")
     print("=" * 60)
     print("• 20개 후보 검색 → LLM 검증 → 최종 5개 추천")
     print("• 'quit' 또는 'exit' 입력시 종료")
@@ -676,6 +690,18 @@ def main():
             save_results_for_web(web_results)
             print(f"[웹 연동] 포스터 경로: /static/posters/")
             print(f"[웹 연동] 흐름곡선 데이터도 추가 가능")
+
+def weighted_interactive_search():
+    """가중치 조절 대화형 검색"""
+    print("=" * 60)
+    print("🎭 가중치 조절 영화 검색 시스템")
+    print("=" * 60)
+    print("• 이 기능은 movie_similarity_finder.py에서 이용하세요")
+    print("• 현재는 기본 청킹 검색만 지원합니다")
+    print("=" * 60)
+    
+    print("💡 movie_similarity_finder.py를 실행하여 가중치 조절 검색을 이용하세요!")
+    return
 
 if __name__ == '__main__':
     main()
