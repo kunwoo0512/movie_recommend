@@ -268,3 +268,33 @@ a.cta-button {
         padding: 30px 20px;
     }
 }
+
+/* 🌟 실시간 LLM 분석 - 새로 추가된 영화 하이라이트 효과 */
+.newly-added {
+    border: 2px solid #4CAF50 !important;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
+    animation: pulse-green 2s ease-in-out;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(76, 175, 80, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+/* 실시간 검색 진행 표시 */
+.streaming-progress {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.approved-movie {
+    border-left: 4px solid #4CAF50;
+    background: linear-gradient(90deg, rgba(76, 175, 80, 0.1) 0%, transparent 100%);
+}
