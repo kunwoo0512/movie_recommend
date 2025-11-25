@@ -205,11 +205,16 @@ function handleStreamingMessage(data) {
                 total_count: streamingResults.length
             };
             
-            if (data.approved_count === 0) {
-                showResults(`"${query}" 검색 결과`, [], '검색 결과가 없습니다.');
-            } else {
-                showResults(`"${query}" 검색 결과 (${data.approved_count}개)`, streamingResults);
-            }
+            // 올바른 형식으로 결과 표시 (객체로 전달)
+            showResults({
+                query: data.approved_count === 0 
+                    ? `"${query}" 검색 결과` 
+                    : `"${query}" 검색 결과 (${data.approved_count}개)`,
+                movies: streamingResults,
+                llm_filtered: true,
+                total_count: streamingResults.length,
+                message: data.approved_count === 0 ? '검색 결과가 없습니다.' : null
+            });
             
             // 최종 상태 저장
             saveSearchState();
@@ -496,13 +501,19 @@ function createMovieCard(movie, rank) {
     const card = document.createElement('div');
     card.className = 'movie-card';
     
-    // 줄거리 축약
+    // 줄거리 축약 (100자로 제한)
     const plot = movie.plot || '줄거리 정보가 없습니다.';
-    const shortPlot = plot.length > 150 ? plot.substring(0, 150) + '...' : plot;
+    const shortPlot = plot.length > 100 ? plot.substring(0, 100) + '...' : plot;
+    
+    // 포스터 이미지 경로 설정 (백엔드에서 poster_url로 보내줌)
+    const posterUrl = movie.poster_url || movie.poster;
+    const posterHTML = posterUrl ? 
+        `<img src="${posterUrl}" alt="${movie.title}" onerror="this.style.display='none'; this.parentElement.classList.add('no-poster');" />` :
+        `<div class="poster-fallback"><i class="fas fa-film"></i></div>`;
     
     card.innerHTML = `
         <div class="movie-poster" onclick="goToMovieDetail(${rank})">
-            <i class="fas fa-film"></i>
+            ${posterHTML}
         </div>
         <div class="movie-info">
             <div class="movie-header">

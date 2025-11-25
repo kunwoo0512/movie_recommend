@@ -37,6 +37,29 @@ global_index = None
 global_metadata = None
 global_models_loaded = False
 global_sentence_model = None  # 임베딩 모델 사전 로딩
+global_movies_data = None  # movies_dataset.json 데이터
+
+def load_movies_dataset():
+    """movies_dataset.json 로드"""
+    global global_movies_data
+    try:
+        with open('movies_dataset.json', 'r', encoding='utf-8') as f:
+            global_movies_data = json.load(f)
+        print(f"✅ movies_dataset 로드 완료: {len(global_movies_data)}개 영화")
+    except Exception as e:
+        print(f"❌ movies_dataset 로드 실패: {e}")
+        global_movies_data = []
+
+def find_movie_data(title, year=None):
+    """영화 제목과 년도로 movies_dataset에서 상세 정보 찾기"""
+    if not global_movies_data:
+        return None
+    
+    for movie in global_movies_data:
+        if movie.get('title') == title:
+            if not year or str(movie.get('year', '')) == str(year):
+                return movie
+    return None
 
 def load_models_on_startup():
     """서버 시작시 모델과 데이터를 사전 로딩"""
@@ -46,6 +69,9 @@ def load_models_on_startup():
     start_time = time.time()
     
     try:
+        # movies_dataset.json 로드 (줄거리, 포스터 정보)
+        load_movies_dataset()
+        
         # FAISS 인덱스 로드 (build_faiss_and_query.py 함수 사용)
         index_path = Path('data/index.faiss')
         if index_path.exists():
@@ -64,10 +90,13 @@ def load_models_on_startup():
         import torch
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"🤖 임베딩 모델 로딩 중... (device: {device})")
+        
+        # meta tensor 문제 해결을 위해 device를 나중에 설정
         global_sentence_model = SentenceTransformer(
-            'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-            device=device
+            'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
         )
+        # 모델 로드 후 device로 이동
+        global_sentence_model = global_sentence_model.to(device)
         print("✅ 임베딩 모델 로드 완료")
         
         global_models_loaded = True
@@ -377,9 +406,9 @@ def streaming_search():
                     import torch
                     device = 'cuda' if torch.cuda.is_available() else 'cpu'
                     global_sentence_model = SentenceTransformer(
-                        'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-                        device=device
+                        'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
                     )
+                    global_sentence_model = global_sentence_model.to(device)
 
                 model = global_sentence_model
                 
@@ -421,13 +450,31 @@ def streaming_search():
                         if judgment['pass'] and judgment['score'] >= 7:  # 통과한 영화만
                             approved_count += 1
                             
-                            # 포맷팅
+                            # movies_dataset에서 상세 정보 가져오기
+                            full_movie_data = find_movie_data(
+                                movie_data.get('title'), 
+                                movie_data.get('year')
+                            )
+                            
+                            # 줄거리와 포스터 정보 추출
+                            plot = full_movie_data.get('plot', '') if full_movie_data else ''
+                            poster_path = full_movie_data.get('poster', '') if full_movie_data else ''
+                            
+                            # 포스터 URL 생성
+                            if poster_path:
+                                # "posters\\파일명.jpg" -> "파일명.jpg" 추출
+                                poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+                                poster_url = f"/assets/posters/{poster_filename}"
+                            else:
+                                poster_url = None  # 포스터가 없으면 None
+                            
                             formatted_movie = {
                                 "title": movie_data.get('title', ''),
                                 "year": movie_data.get('year', ''),
                                 "director": movie_data.get('director', ''),
+                                "plot": plot,
                                 "score": movie_data.get('score', 0),
-                                "poster_url": f"/static/posters/{movie_data.get('title', '').replace(':', '').replace('/', '_')}.jpg",
+                                "poster_url": poster_url,
                                 "llm_analysis": {
                                     "score": judgment['score'],
                                     "reason": judgment['reason']
@@ -524,9 +571,9 @@ def perform_direct_search(query):
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             print(f"🤖 임베딩 모델 로딩 중... (device: {device})")
             global_sentence_model = SentenceTransformer(
-                'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-                device=device
+                'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
             )
+            global_sentence_model = global_sentence_model.to(device)
             print("✅ 임베딩 모델 로드 완료")
 
         model = global_sentence_model
@@ -706,6 +753,21 @@ def movie_detail(movie_rank):
             return render_template('error.html', message='유효하지 않은 영화입니다.')
         
         movie = movies[movie_rank - 1]
+        
+        # movies_dataset에서 상세 정보 가져와서 병합
+        full_movie_data = find_movie_data(movie.get('title'), movie.get('year'))
+        if full_movie_data:
+            # 포스터 URL 생성
+            poster_path = full_movie_data.get('poster', '')
+            if poster_path:
+                poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+                movie['poster_url'] = f"/assets/posters/{poster_filename}"
+            else:
+                movie['poster_url'] = None  # 포스터가 없으면 None
+            
+            # 전체 줄거리 추가
+            movie['plot'] = full_movie_data.get('plot', '줄거리 정보가 없습니다.')
+        
         return render_template('movie_detail.html', movie=movie, query=results.get('query'))
         
     except Exception as e:
@@ -748,11 +810,27 @@ def get_all_explanations():
         return jsonify({'error': str(e)}), 500
 
 # 정적 파일 제공을 위한 라우트
-@app.route('/static/posters/<filename>')
+@app.route('/assets/posters/<filename>')
 def serve_poster(filename):
-    """포스터 이미지 제공 (기본 이미지로 대체)"""
-    # 실제 포스터가 없으면 기본 이미지 반환
-    return app.send_static_file(f'images/default_poster.jpg')
+    """assets/posters에서 실제 포스터 이미지 제공"""
+    import os
+    from pathlib import Path
+    from flask import send_from_directory, abort
+    
+    # 프로젝트 루트의 assets/posters 경로
+    poster_dir = os.path.join(os.path.dirname(__file__), 'assets', 'posters')
+    poster_path = os.path.join(poster_dir, filename)
+    
+    # 파일이 존재하면 실제 포스터 반환
+    if os.path.exists(poster_path):
+        return send_from_directory(poster_dir, filename)
+    
+    # 없으면 기본 이미지 반환
+    try:
+        return app.send_static_file('images/default_poster.jpg')
+    except:
+        # 기본 이미지도 없으면 404
+        abort(404)
 
 if __name__ == '__main__':
     # 필요한 디렉토리 생성

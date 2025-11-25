@@ -300,14 +300,23 @@ def format_results_for_web(movies: List[Dict], query: str, llm_filtered: bool = 
     }
     
     for i, movie in enumerate(movies, 1):
+        # 포스터 URL: movies_dataset의 poster 필드 사용
+        poster_path = movie.get('poster', '')
+        if poster_path:
+            # "posters\\파일명.jpg" -> "파일명.jpg" 추출
+            poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+            poster_url = f"/static/posters/{poster_filename}"
+        else:
+            poster_url = "/static/images/default_poster.jpg"
+            
         formatted_movie = {
             "rank": i,
             "title": movie.get('title', 'Unknown'),
             "year": movie.get('year', 'Unknown'),
             "director": movie.get('director', 'Unknown'),
-            "plot": movie.get('plot', ''),
+            "plot": movie.get('plot', '줄거리 정보가 없습니다.'),
             "score": float(movie.get('score', 0.0)),
-            "poster_url": f"/static/posters/{movie.get('title', 'default').replace(' ', '_')}.jpg",
+            "poster": poster_url,
             "llm_analysis": {
                 "score": movie.get('llm_score'),
                 "reason": movie.get('llm_reason')

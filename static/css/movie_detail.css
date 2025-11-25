@@ -105,6 +105,31 @@
     color: #666;
     margin-bottom: 1.5rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.movie-poster-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+.movie-poster-large .poster-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* 포스터 로드 실패시 스타일 */
+.movie-poster-large.no-poster::after {
+    content: '\f008'; /* Font Awesome film icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 4rem;
+    color: #666;
 }
 
 .movie-rating {

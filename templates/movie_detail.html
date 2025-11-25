@@ -45,7 +45,13 @@
                 <div class="movie-detail-card">
                     <div class="movie-poster-section">
                         <div class="movie-poster-large">
-                            <i class="fas fa-film"></i>
+                            {% if movie.poster_url %}
+                                <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" onerror="this.style.display='none'; this.parentElement.classList.add('no-poster');">
+                            {% else %}
+                                <div class="poster-fallback">
+                                    <i class="fas fa-film"></i>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="movie-rating">
                             <div class="rating-badge">
