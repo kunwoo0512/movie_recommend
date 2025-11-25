@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 비교 - {{ original.title }} vs {{ related.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/movie_compare.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-film"></i>
+                <span>MovieFinder</span>
+            </div>
+            <nav class="nav">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    홈으로
+                </a>
+                <a href="javascript:history.back()" class="nav-link">
+                    <i class="fas fa-arrow-left"></i>
+                    뒤로가기
+                </a>
+            </nav>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="main-content">
+            <div class="container">
+                <!-- 비교 제목 -->
+                <div class="compare-header">
+                    <h1 class="compare-title">
+                        <i class="fas fa-balance-scale"></i>
+                        영화 유사도 분석
+                    </h1>
+                    <p class="compare-subtitle">두 영화가 어떤 점에서 유사한지 분석해보세요</p>
+                </div>
+
+                <!-- 영화 정보 비교 -->
+                <div class="movies-comparison">
+                    <!-- 원본 영화 -->
+                    <div class="movie-section original">
+                        <div class="movie-label">원본 영화</div>
+                        <div class="movie-card">
+                            <div class="movie-poster">
+                                {% if original.poster_url %}
+                                    <img src="{{ original.poster_url }}" alt="{{ original.title }}" />
+                                {% else %}
+                                    <div class="poster-placeholder">
+                                        <i class="fas fa-film"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">{{ original.title }}</h3>
+                                <p class="movie-year">{{ original.year }}</p>
+                                <p class="movie-director">감독: {{ original.director or '정보 없음' }}</p>
+                                <div class="movie-genres">
+                                    {% set original_genres = original.genres.keys() | list if original.genres else [] %}
+                                    {% for genre in original_genres[:3] %}
+                                        <span class="genre-tag">{{ genre }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VS 표시 -->
+                    <div class="vs-indicator">
+                        <div class="vs-circle">
+                            <span>VS</span>
+                        </div>
+                    </div>
+
+                    <!-- 추천 영화 -->
+                    <div class="movie-section related">
+                        <div class="movie-label">추천 영화</div>
+                        <div class="movie-card">
+                            <div class="movie-poster">
+                                {% if related.poster_url %}
+                                    <img src="{{ related.poster_url }}" alt="{{ related.title }}" />
+                                {% else %}
+                                    <div class="poster-placeholder">
+                                        <i class="fas fa-film"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">{{ related.title }}</h3>
+                                <p class="movie-year">{{ related.year }}</p>
+                                <p class="movie-director">감독: {{ related.director or '정보 없음' }}</p>
+                                <div class="movie-genres">
+                                    {% set related_genres = related.genres.keys() | list if related.genres else [] %}
+                                    {% for genre in related_genres[:3] %}
+                                        <span class="genre-tag">{{ genre }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 유사도 분석 -->
+                <div class="similarity-analysis">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        유사도 분석 결과
+                    </h2>
+
+                    <!-- 유사도 점수 카드 -->
+                    <div class="similarity-cards">
+                        <div class="similarity-card plot">
+                            <div class="card-icon">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>줄거리 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.plot or 0) * 100) }}%</div>
+                                <div class="weight">가중치: 80%</div>
+                            </div>
+                        </div>
+
+                        <div class="similarity-card flow">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>흐름곡선 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.flow or 0) * 100) }}%</div>
+                                <div class="weight">가중치: 10%</div>
+                            </div>
+                        </div>
+
+                        <div class="similarity-card genre">
+                            <div class="card-icon">
+                                <i class="fas fa-masks-theater"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>장르 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.genre or 0) * 100) }}%</div>
+                                <div class="weight">가중치: 10%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 흐름곡선 비교 차트 -->
+                    <div class="chart-section">
+                        <h3 class="chart-title">
+                            <i class="fas fa-wave-square"></i>
+                            스토리 흐름곡선 비교
+                        </h3>
+                        <div class="chart-container">
+                            <canvas id="flowChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LLM 분석 설명 -->
+                {% if llm_explanation %}
+                <div class="llm-explanation">
+                    <h2 class="section-title">
+                        <i class="fas fa-robot"></i>
+                        AI 분석 결과
+                    </h2>
+                    <div class="explanation-content">
+                        <div class="explanation-text">
+                            {{ llm_explanation }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 액션 버튼 -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="history.back()">
+                        <i class="fas fa-arrow-left"></i>
+                        돌아가기
+                    </button>
+                    <button class="action-btn secondary" onclick="shareComparison()">
+                        <i class="fas fa-share"></i>
+                        비교 결과 공유
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
+        </footer>
+    </div>
+
+    <script>
+        // 흐름곡선 차트 그리기
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('flowChart').getContext('2d');
+            
+            // 흐름곡선 데이터 (JSON에서 가져오기) - 없으면 기본값 사용
+            let originalFlow = {{ original.flow_curve | tojson | safe }};
+            let relatedFlow = {{ related.flow_curve | tojson | safe }};
+            
+            // 데이터가 없는 경우 기본 더미 데이터 생성
+            if (!originalFlow || originalFlow === null || !Array.isArray(originalFlow)) {
+                originalFlow = [3, 4, 6, 8, 7, 9, 8, 6, 4, 2];  // 기본 흐름곡선
+            }
+            if (!relatedFlow || relatedFlow === null || !Array.isArray(relatedFlow)) {
+                relatedFlow = [2, 5, 7, 6, 8, 9, 7, 5, 3, 1];   // 기본 흐름곡선
+            }
+            
+            // 데이터 포인트 생성 (0-100% 범위)
+            const maxLength = Math.max(originalFlow.length, relatedFlow.length);
+            const labels = Array.from({length: maxLength}, 
+                                    (_, i) => `${Math.round((i / (maxLength - 1)) * 100)}%`);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '{{ original.title }}',
+                            data: originalFlow,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: '{{ related.title }}',
+                            data: relatedFlow,
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '스토리 전개에 따른 감정/긴장도 변화',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: '감정/긴장도 (1-10)'
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '스토리 진행률'
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        });
+
+        // 비교 결과 공유
+        function shareComparison() {
+            const originalTitle = "{{ original.title }}";
+            const relatedTitle = "{{ related.title }}";
+            const text = `"${originalTitle}"과 "${relatedTitle}" 영화 유사도 분석 결과를 확인해보세요!`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: `${originalTitle} vs ${relatedTitle} 비교`,
+                    text: text,
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(text + ' ' + window.location.href).then(() => {
+                    alert('비교 결과 링크가 클립보드에 복사되었습니다!');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

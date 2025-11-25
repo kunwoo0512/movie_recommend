@@ -42,21 +42,51 @@ class LLMRecommendationExplainer:
             print(f"⚠️ LLM 설명 기능 비활성화: {e}")
             self.available = False
     
-    def explain_recommendation(self, target_movie: dict, recommended_movie: dict) -> str:
-        """추천 이유 설명 생성"""
+    def explain_recommendation(self, target_movie: dict, recommended_movie: dict, 
+                              similarity_scores: dict = None, weights: dict = None) -> str:
+        """추천 이유 설명 생성 (가중치와 유사도 점수 기반)"""
         if not self.available:
             return "LLM 설명 기능을 사용할 수 없습니다."
         
         try:
-            prompt = self._create_explanation_prompt(target_movie, recommended_movie)
+            # 유사도 점수 분석
+            plot_score = similarity_scores.get('plot', 0) if similarity_scores else 0
+            flow_score = similarity_scores.get('flow', 0) if similarity_scores else 0
+            genre_score = similarity_scores.get('genre', 0) if similarity_scores else 0
+            
+            # 가중치 정보
+            plot_weight = weights.get('plot', 0.8) if weights else 0.8
+            flow_weight = weights.get('flow', 0.1) if weights else 0.1
+            genre_weight = weights.get('genre', 0.1) if weights else 0.1
+            
+            # 가장 높은 유사도를 가진 요소 찾기
+            similarity_factors = {
+                'plot': plot_score,
+                'flow': flow_score, 
+                'genre': genre_score
+            }
+            
+            # 가중 점수 계산
+            weighted_factors = {
+                'plot': plot_score * plot_weight,
+                'flow': flow_score * flow_weight,
+                'genre': genre_score * genre_weight
+            }
+            
+            main_factor = max(weighted_factors, key=weighted_factors.get)
+            
+            prompt = self._create_focused_explanation_prompt(
+                target_movie, recommended_movie, main_factor, 
+                similarity_factors, weights
+            )
             
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "당신은 영화 추천 시스템의 전문가입니다. 사용자가 좋아하는 영화를 바탕으로 왜 특정 영화가 추천되었는지 간결하고 구체적으로 설명해주세요."},
+                    {"role": "system", "content": "당신은 영화 추천 전문가입니다. 주어진 유사도 분석 결과를 바탕으로 간결하고 구체적인 추천 이유를 한국어로 설명해주세요."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=200,
+                max_tokens=150,
                 temperature=0.3
             )
             
@@ -66,47 +96,63 @@ class LLMRecommendationExplainer:
         except Exception as e:
             return f"설명 생성 중 오류: {str(e)[:50]}..."
     
-    def _create_explanation_prompt(self, target_movie: dict, recommended_movie: dict) -> str:
-        """설명 생성용 프롬프트 작성"""
+    def _create_focused_explanation_prompt(self, target_movie: dict, recommended_movie: dict, 
+                                         main_factor: str, similarity_scores: dict, weights: dict) -> str:
+        """주요 유사도 요소에 집중한 설명 프롬프트 생성"""
         target_title = target_movie.get('title', 'Unknown')
         target_year = target_movie.get('year', 'Unknown')
-        target_plot = target_movie.get('plot', '')[:300]
         
         rec_title = recommended_movie.get('title', 'Unknown')
         rec_year = recommended_movie.get('year', 'Unknown')
-        rec_director = recommended_movie.get('director', 'Unknown')
-        rec_plot = recommended_movie.get('plot', '')[:300]
         
-        # 점수 정보
-        comp_scores = recommended_movie.get('component_scores', {})
-        weights = recommended_movie.get('weights_used', {})
-        final_score = recommended_movie.get('similarity_score', 0)
-        
-        # 장르 정보
-        genres = recommended_movie.get('genres', {})
-        top_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)[:3] if genres else []
-        genre_str = ", ".join([f"{g}({s})" for g, s in top_genres])
-        
-        prompt = f"""
-사용자가 선택한 영화: {target_title} ({target_year})
+        # 주요 유사도 요소에 따른 맞춤형 프롬프트
+        if main_factor == 'plot':
+            target_plot = target_movie.get('plot', '')[:200]
+            rec_plot = recommended_movie.get('plot', '')[:200]
+            
+            prompt = f"""
+원본 영화: {target_title} ({target_year})
 줄거리: {target_plot}
 
-추천된 영화: {rec_title} ({rec_year})
-감독: {rec_director}
+추천 영화: {rec_title} ({rec_year})  
 줄거리: {rec_plot}
-장르: {genre_str}
 
-유사도 분석:
-- 최종 유사도: {final_score:.3f}
-- 줄거리 유사도: {comp_scores.get('plot', 0):.3f} (가중치: {weights.get('plot', 0)*100:.0f}%)
-- 흐름곡선 유사도: {comp_scores.get('flow', 0):.3f} (가중치: {weights.get('flow', 0)*100:.0f}%)
-- 장르 유사도: {comp_scores.get('genre', 0):.3f} (가중치: {weights.get('genre', 0)*100:.0f}%)
+줄거리 유사도: {similarity_scores.get('plot', 0):.2f}
+가중치: 줄거리 {weights.get('plot', 0.8):.1f}, 흐름 {weights.get('flow', 0.1):.1f}, 장르 {weights.get('genre', 0.1):.1f}
 
-위 정보를 바탕으로 왜 이 영화가 추천되었는지 2-3문장으로 간결하고 구체적으로 설명해주세요.
-가장 높은 점수를 받은 요소를 중심으로 설명하되, 두 영화 간의 실질적인 유사점을 언급해주세요.
+두 영화의 줄거리에서 어떤 부분이 유사한지 구체적으로 설명해주세요. (2-3문장으로 간결하게)
 """
-        return prompt
+        
+        elif main_factor == 'flow':
+            prompt = f"""
+원본 영화: {target_title} ({target_year})
+추천 영화: {rec_title} ({rec_year})
 
+흐름곡선 유사도: {similarity_scores.get('flow', 0):.2f}
+가중치: 줄거리 {weights.get('plot', 0.8):.1f}, 흐름 {weights.get('flow', 0.1):.1f}, 장르 {weights.get('genre', 0.1):.1f}
+
+두 영화의 스토리 전개 패턴이나 감정 흐름이 어떻게 유사한지 설명해주세요. (2-3문장으로 간결하게)
+"""
+        
+        else:  # genre
+            target_genres = list(target_movie.get('genres', {}).keys())[:3]
+            rec_genres = list(recommended_movie.get('genres', {}).keys())[:3]
+            
+            prompt = f"""
+원본 영화: {target_title} ({target_year})
+장르: {', '.join(target_genres) if target_genres else '정보 없음'}
+
+추천 영화: {rec_title} ({rec_year})
+장르: {', '.join(rec_genres) if rec_genres else '정보 없음'}
+
+장르 유사도: {similarity_scores.get('genre', 0):.2f}
+가중치: 줄거리 {weights.get('plot', 0.8):.1f}, 흐름 {weights.get('flow', 0.1):.1f}, 장르 {weights.get('genre', 0.1):.1f}
+
+두 영화의 공통 장르나 스타일이 어떻게 유사한지 설명해주세요. (2-3문장으로 간결하게)
+"""
+        
+        return prompt
+    
 class MovieSimilarityRecommender:
     def __init__(self, data_dir: str = "data", enable_llm: bool = False, api_key: str = None):
         """Initialize unified multimodal movie similarity recommender"""
@@ -132,7 +178,7 @@ class MovieSimilarityRecommender:
             raise RuntimeError("Failed to load data")
     
     def get_similar_movies(self, movie_title: str, movie_year: str = None,
-                          w_plot: float = 0.65, w_flow: float = 0.25, w_genre: float = 0.10,
+                          w_plot: float = 0.8, w_flow: float = 0.1, w_genre: float = 0.1,
                           top_k: int = 10) -> list:
         """Get similar movies using unified multimodal similarity"""
         if not self.initialized:
@@ -236,15 +282,15 @@ def interactive_mode(recommender):
             
             # Weight input
             print("\n⚖️ Weight settings (press Enter for defaults):")
-            w_plot_input = input("  📝 Plot weight [default: 0.65]: ").strip()
-            w_flow_input = input("  📈 Flow weight [default: 0.25]: ").strip()
-            w_genre_input = input("  🎭 Genre weight [default: 0.10]: ").strip()
+            w_plot_input = input("  📝 Plot weight [default: 0.8]: ").strip()
+            w_flow_input = input("  📈 Flow weight [default: 0.1]: ").strip()
+            w_genre_input = input("  🎭 Genre weight [default: 0.1]: ").strip()
             
             # Parse weights
             try:
-                w_plot = float(w_plot_input) if w_plot_input else 0.65
-                w_flow = float(w_flow_input) if w_flow_input else 0.25
-                w_genre = float(w_genre_input) if w_genre_input else 0.10
+                w_plot = float(w_plot_input) if w_plot_input else 0.8
+                w_flow = float(w_flow_input) if w_flow_input else 0.1
+                w_genre = float(w_genre_input) if w_genre_input else 0.1
                 
                 # Validate weights
                 if w_plot < 0 or w_flow < 0 or w_genre < 0:
@@ -287,9 +333,9 @@ def main():
     parser = argparse.ArgumentParser(description="Unified Multimodal Movie Similarity Recommender")
     parser.add_argument('--movie', type=str, help='Movie title to find similar movies for')
     parser.add_argument('--year', type=str, help='Movie year (optional)')
-    parser.add_argument('--plot_weight', type=float, default=0.65, help='Plot weight')
-    parser.add_argument('--flow_weight', type=float, default=0.25, help='Flow weight')
-    parser.add_argument('--genre_weight', type=float, default=0.10, help='Genre weight')
+    parser.add_argument('--plot_weight', type=float, default=0.8, help='Plot weight')
+    parser.add_argument('--flow_weight', type=float, default=0.1, help='Flow weight')
+    parser.add_argument('--genre_weight', type=float, default=0.1, help='Genre weight')
     parser.add_argument('--top_k', type=int, default=10, help='Number of recommendations')
     parser.add_argument('--data_dir', type=str, default='data', help='Data directory')
     

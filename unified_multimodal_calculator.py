@@ -41,11 +41,33 @@ class UnifiedMultimodalCalculator:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             print(f"[Device] 디바이스: {device}")
             
-            self.sbert_model = SentenceTransformer(
-                'paraphrase-multilingual-MiniLM-L12-v2', 
-                device=device
-            )
-            print("[Model] SentenceBERT 모델 로드 완료")
+            try:
+                # meta tensor 문제 해결을 위해 CPU에서 먼저 로드
+                self.sbert_model = SentenceTransformer(
+                    'paraphrase-multilingual-MiniLM-L12-v2', 
+                    device='cpu'  # CPU에서 먼저 로드
+                )
+                
+                # GPU 사용 가능한 경우에만 GPU로 이동
+                if device == 'cuda':
+                    try:
+                        self.sbert_model = self.sbert_model.to(device)
+                        print(f"[Model] SentenceBERT 모델을 {device}로 이동 완료")
+                    except Exception as e:
+                        print(f"[Warning] GPU 이동 실패, CPU 사용: {str(e)}")
+                        self.sbert_model = self.sbert_model.to('cpu')
+                else:
+                    print("[Model] SentenceBERT 모델 CPU에서 로드 완료")
+                    
+            except Exception as e:
+                print(f"[Error] SentenceBERT 모델 로드 실패: {str(e)}")
+                # 폴백: 더 가벼운 모델 사용
+                print("[Fallback] 기본 모델로 재시도...")
+                self.sbert_model = SentenceTransformer(
+                    'all-MiniLM-L6-v2',
+                    device='cpu'
+                )
+                print("[Model] 기본 SentenceBERT 모델 로드 완료")
             
             # 영화 메타데이터 로드 (흐름/장르용)
             metadata_path = os.path.join(self.data_dir, "separated_embeddings", "movie_metadata.jsonl")
@@ -263,15 +285,34 @@ class UnifiedMultimodalCalculator:
         """영화 제목으로 찾기"""
         title_lower = title.lower().strip()
         
+        # 입력 제목에서 연도 분리
+        input_title = title_lower
+        input_year = None
+        if '(' in title_lower and ')' in title_lower:
+            parts = title_lower.split('(')
+            input_title = parts[0].strip()
+            year_part = parts[1].split(')')[0].strip()
+            if year_part.isdigit():
+                input_year = year_part
+        
         for i, movie in enumerate(self.movie_metadata):
             movie_title = movie.get('title', '').lower().strip()
-            if title_lower == movie_title:
+            movie_year = str(movie.get('year', '')).strip()
+            
+            # 정확한 매칭 (제목만)
+            if input_title == movie_title:
+                # 연도까지 지정된 경우 연도도 확인
+                if input_year and input_year != movie_year:
+                    continue
                 return movie, i
-                
-            # 연도 포함된 경우 처리
+            
+            # 영화 제목에서 연도 제거하고 비교
             if '(' in movie_title and ')' in movie_title:
                 title_without_year = movie_title.split('(')[0].strip()
-                if title_lower == title_without_year:
+                if input_title == title_without_year:
+                    # 연도까지 지정된 경우 연도도 확인
+                    if input_year and input_year != movie_year:
+                        continue
                     return movie, i
         
         return None, -1

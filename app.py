@@ -91,13 +91,33 @@ def load_models_on_startup():
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"🤖 임베딩 모델 로딩 중... (device: {device})")
         
-        # meta tensor 문제 해결을 위해 device를 나중에 설정
-        global_sentence_model = SentenceTransformer(
-            'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
-        )
-        # 모델 로드 후 device로 이동
-        global_sentence_model = global_sentence_model.to(device)
-        print("✅ 임베딩 모델 로드 완료")
+        try:
+            # meta tensor 문제 해결을 위해 CPU에서 먼저 로드
+            global_sentence_model = SentenceTransformer(
+                'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+                device='cpu'  # CPU에서 먼저 로드
+            )
+            
+            # GPU 사용 가능한 경우에만 GPU로 이동
+            if device == 'cuda':
+                try:
+                    global_sentence_model = global_sentence_model.to(device)
+                    print(f"✅ 임베딩 모델을 {device}로 이동 완료")
+                except Exception as e:
+                    print(f"⚠️ GPU 이동 실패, CPU 사용: {str(e)}")
+                    global_sentence_model = global_sentence_model.to('cpu')
+            else:
+                print("✅ 임베딩 모델 CPU에서 로드 완료")
+                
+        except Exception as e:
+            print(f"❌ 임베딩 모델 로드 실패: {str(e)}")
+            # 폴백: 기본 모델 사용
+            print("🔄 기본 모델로 재시도...")
+            global_sentence_model = SentenceTransformer(
+                'sentence-transformers/all-MiniLM-L6-v2',
+                device='cpu'
+            )
+            print("✅ 기본 임베딩 모델 로드 완료")
         
         global_models_loaded = True
         load_time = time.time() - start_time
@@ -831,6 +851,152 @@ def serve_poster(filename):
     except:
         # 기본 이미지도 없으면 404
         abort(404)
+
+@app.route('/api/related-movies', methods=['POST'])
+def get_related_movies():
+    """관련영화 추천 API"""
+    try:
+        data = request.get_json()
+        movie_title = data.get('title', '').strip()
+        movie_year = data.get('year', '')
+        top_k = data.get('top_k', 6)
+        
+        if not movie_title:
+            return jsonify({'error': '영화 제목이 필요합니다'}), 400
+        
+        # weighted_movie_finder 사용
+        from weighted_movie_finder import MovieSimilarityRecommender
+        
+        recommender = MovieSimilarityRecommender(enable_llm=True)
+        
+        # 가중치는 기본값 사용 (0.8, 0.1, 0.1)
+        similar_movies = recommender.get_similar_movies(
+            movie_title=movie_title,
+            movie_year=movie_year,
+            top_k=top_k
+        )
+        
+        if not similar_movies:
+            return jsonify({'movies': [], 'message': '관련 영화를 찾을 수 없습니다'})
+        
+        # 포스터 URL과 추가 정보 처리
+        formatted_movies = []
+        for movie in similar_movies:
+            # movies_dataset에서 포스터 정보 찾기
+            full_movie_data = find_movie_data(movie.get('title'), movie.get('year'))
+            
+            if full_movie_data and full_movie_data.get('poster'):
+                poster_path = full_movie_data.get('poster', '')
+                poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+                poster_url = f"/assets/posters/{poster_filename}"
+            else:
+                poster_url = None
+            
+            formatted_movie = {
+                'title': movie.get('title', ''),
+                'year': movie.get('year', ''),
+                'director': movie.get('director', ''),
+                'similarity_score': movie.get('similarity_score', 0),
+                'poster_url': poster_url,
+                'genres': movie.get('genres', {}),
+                'component_scores': movie.get('component_scores', {}),
+                'llm_explanation': movie.get('llm_explanation', '')
+            }
+            formatted_movies.append(formatted_movie)
+        
+        return jsonify({
+            'movies': formatted_movies,
+            'total': len(formatted_movies)
+        })
+        
+    except Exception as e:
+        print(f"관련영화 API 오류: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/compare')
+def movie_compare():
+    """영화 비교 페이지"""
+    try:
+        # URL 파라미터에서 영화 정보 가져오기
+        original_title = request.args.get('original', '').strip()
+        original_year = request.args.get('original_year', '')
+        related_title = request.args.get('related', '').strip()
+        related_year = request.args.get('related_year', '')
+        
+        if not original_title or not related_title:
+            return render_template('error.html', 
+                                 error_message='비교할 영화 정보가 부족합니다.')
+        
+        # 두 영화의 상세 정보 가져오기
+        original_movie = find_movie_data(original_title, original_year)
+        related_movie = find_movie_data(related_title, related_year)
+        
+        if not original_movie or not related_movie:
+            return render_template('error.html', 
+                                 error_message='영화 정보를 찾을 수 없습니다.')
+        
+        # 포스터 URL 설정
+        def get_poster_url(movie_data):
+            if movie_data and movie_data.get('poster'):
+                poster_path = movie_data.get('poster', '')
+                poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+                return f"/assets/posters/{poster_filename}"
+            return None
+        
+        original_movie['poster_url'] = get_poster_url(original_movie)
+        related_movie['poster_url'] = get_poster_url(related_movie)
+        
+        # weighted_movie_finder로 유사도 분석
+        from weighted_movie_finder import MovieSimilarityRecommender, LLMRecommendationExplainer
+        
+        recommender = MovieSimilarityRecommender(enable_llm=True)
+        
+        # 원본 영화 기준으로 관련 영화들을 찾아서 해당 영화의 점수를 가져오기
+        try:
+            search_title = f"{original_title} ({original_year})" if original_year else original_title
+            similar_movies = recommender.get_similar_movies(
+                movie_title=original_title,
+                movie_year=original_year,
+                top_k=20  # 더 많이 찾아서 해당 영화를 찾을 확률 높이기
+            )
+            
+            # 관련 영화의 유사도 점수 찾기
+            similarity_analysis = {'plot': 0.0, 'flow': 0.0, 'genre': 0.0, 'total': 0.0}
+            for movie in similar_movies:
+                if (movie.get('title', '').lower().strip() == related_title.lower().strip() and
+                    str(movie.get('year', '')) == str(related_year)):
+                    component_scores = movie.get('component_scores', {})
+                    similarity_analysis = {
+                        'plot': component_scores.get('plot', 0.0),
+                        'flow': component_scores.get('flow', 0.0),
+                        'genre': component_scores.get('genre', 0.0),
+                        'total': movie.get('similarity_score', 0.0)
+                    }
+                    break
+        except Exception as e:
+            print(f"유사도 분석 오류: {e}")
+            similarity_analysis = {'plot': 0.0, 'flow': 0.0, 'genre': 0.0, 'total': 0.0}
+        
+        # LLM 설명 생성
+        explainer = LLMRecommendationExplainer()
+        llm_explanation = ""
+        if explainer.available:
+            weights = {'plot': 0.8, 'flow': 0.1, 'genre': 0.1}
+            llm_explanation = explainer.explain_recommendation(
+                original_movie, related_movie, 
+                similarity_analysis, weights
+            )
+        
+        return render_template('movie_compare.html',
+                             original=original_movie,
+                             related=related_movie,
+                             similarity=similarity_analysis,
+                             llm_explanation=llm_explanation)
+        
+    except Exception as e:
+        print(f"영화 비교 페이지 오류: {e}")
+        return render_template('error.html', 
+                             error_message=f'오류가 발생했습니다: {str(e)}')
 
 if __name__ == '__main__':
     # 필요한 디렉토리 생성

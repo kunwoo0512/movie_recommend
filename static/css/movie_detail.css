@@ -366,3 +366,149 @@
         display: none;
     }
 }
+
+/* 관련영화 추천 섹션 */
+.related-movies-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    margin: 2rem 0;
+    padding: 2rem 0;
+    border-radius: 15px;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.section-title i {
+    color: #764ba2;
+}
+
+.related-movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.related-movie-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.related-movie-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.related-poster {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.related-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.poster-placeholder {
+    color: #666;
+    font-size: 2rem;
+}
+
+.related-info {
+    padding: 1rem;
+}
+
+.related-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.related-year {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.similarity-score {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #764ba2;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.similarity-score i {
+    font-size: 0.8rem;
+}
+
+.loading-related,
+.error-message,
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.loading-related i,
+.error-message i,
+.no-results i {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #764ba2;
+}
+
+.error-message i {
+    color: #e74c3c;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+    .related-movies-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 0 0.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .related-poster {
+        height: 150px;
+    }
+    
+    .related-info {
+        padding: 0.75rem;
+    }
+}

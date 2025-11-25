@@ -119,6 +119,23 @@
             </div>
         </main>
 
+        <!-- 관련영화 추천 섹션 -->
+        <section class="related-movies-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-film"></i>
+                    이런 영화는 어떠세요?
+                </h2>
+                <div class="related-movies-grid" id="relatedMoviesGrid">
+                    <!-- 관련영화가 동적으로 로드됩니다 -->
+                    <div class="loading-related">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>관련영화를 찾는 중...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 푸터 -->
         <footer class="footer">
             <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
@@ -126,6 +143,87 @@
     </div>
 
     <script>
+        // 페이지 로드시 관련영화 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRelatedMovies();
+        });
+
+        // 관련영화 로드
+        function loadRelatedMovies() {
+            const movieTitle = "{{ movie.title }}";
+            const movieYear = "{{ movie.year }}";
+            
+            fetch('/api/related-movies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: movieTitle,
+                    year: movieYear,
+                    top_k: 6
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayRelatedMovies(data.movies || []);
+            })
+            .catch(error => {
+                console.error('관련영화 로드 실패:', error);
+                document.getElementById('relatedMoviesGrid').innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>관련영화를 불러올 수 없습니다.</span>
+                    </div>
+                `;
+            });
+        }
+
+        // 관련영화 표시
+        function displayRelatedMovies(movies) {
+            const grid = document.getElementById('relatedMoviesGrid');
+            
+            if (movies.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-film"></i>
+                        <span>관련영화를 찾을 수 없습니다.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const moviesHTML = movies.map(movie => `
+                <div class="related-movie-card" onclick="goToComparison('${movie.title}', '${movie.year}')">
+                    <div class="related-poster">
+                        ${movie.poster_url ? 
+                            `<img src="${movie.poster_url}" alt="${movie.title}" />` : 
+                            `<div class="poster-placeholder"><i class="fas fa-film"></i></div>`
+                        }
+                    </div>
+                    <div class="related-info">
+                        <h4 class="related-title">${movie.title}</h4>
+                        <p class="related-year">${movie.year}</p>
+                        <div class="similarity-score">
+                            <i class="fas fa-star"></i>
+                            <span>${(movie.similarity_score * 100).toFixed(1)}% 유사</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            grid.innerHTML = moviesHTML;
+        }
+
+        // 영화 비교 페이지로 이동
+        function goToComparison(relatedTitle, relatedYear) {
+            const originalTitle = "{{ movie.title }}";
+            const originalYear = "{{ movie.year }}";
+            
+            const url = `/compare?original=${encodeURIComponent(originalTitle)}&original_year=${encodeURIComponent(originalYear)}&related=${encodeURIComponent(relatedTitle)}&related_year=${encodeURIComponent(relatedYear)}`;
+            window.location.href = url;
+        }
+
         // 비슷한 영화 검색
         function searchSimilar() {
             const movieTitle = "{{ movie.title }}";
