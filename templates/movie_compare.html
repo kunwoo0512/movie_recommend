@@ -225,20 +225,28 @@
                         {
                             label: '{{ original.title }}',
                             data: originalFlow,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderWidth: 3,
+                            borderColor: '#00BFFF',  // 하늘색 (Deep Sky Blue)
+                            backgroundColor: 'rgba(0, 191, 255, 0.15)',
+                            borderWidth: 4,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointBackgroundColor: '#00BFFF',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
                         },
                         {
                             label: '{{ related.title }}',
                             data: relatedFlow,
-                            borderColor: '#764ba2',
-                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
-                            borderWidth: 3,
+                            borderColor: '#FF4444',  // 빨간색 (Bright Red)
+                            backgroundColor: 'rgba(255, 68, 68, 0.15)',
+                            borderWidth: 4,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointBackgroundColor: '#FF4444',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
                         }
                     ]
                 },
@@ -250,13 +258,21 @@
                             display: true,
                             text: '스토리 전개에 따른 감정/긴장도 변화',
                             font: {
-                                size: 16,
+                                size: 18,
                                 weight: 'bold'
-                            }
+                            },
+                            color: '#ffffff'  // 제목을 흰색으로
                         },
                         legend: {
                             display: true,
-                            position: 'top'
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff',  // 범례 텍스트를 흰색으로
+                                font: {
+                                    size: 14,
+                                    weight: '600'
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -265,19 +281,27 @@
                             max: 10,
                             title: {
                                 display: true,
-                                text: '감정/긴장도 (1-10)'
+                                text: '감정/긴장도 (1-10)',
+                                color: '#ffffff'  // Y축 제목을 흰색으로
+                            },
+                            ticks: {
+                                color: '#ffffff'  // Y축 눈금을 흰색으로
                             },
                             grid: {
-                                color: 'rgba(0,0,0,0.1)'
+                                color: 'rgba(255, 255, 255, 0.2)'  // 그리드를 연한 흰색으로
                             }
                         },
                         x: {
                             title: {
                                 display: true,
-                                text: '스토리 진행률'
+                                text: '스토리 진행률',
+                                color: '#ffffff'  // X축 제목을 흰색으로
+                            },
+                            ticks: {
+                                color: '#ffffff'  // X축 눈금을 흰색으로
                             },
                             grid: {
-                                color: 'rgba(0,0,0,0.1)'
+                                color: 'rgba(255, 255, 255, 0.2)'  // 그리드를 연한 흰색으로
                             }
                         }
                     },
