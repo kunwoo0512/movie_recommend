@@ -315,6 +315,157 @@
     width: 100%;
 }
 
+/* 차트 설명 텍스트 */
+.chart-description {
+    font-size: 0.9rem;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid #00BFFF;
+    line-height: 1.6;
+}
+
+.description-point {
+    display: inline-block;
+    margin: 0.2rem 0;
+    color: #e0e0e0;
+}
+
+/* 자세히 보기 버튼 */
+.chart-actions {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.detail-btn {
+    background: linear-gradient(135deg, #00BFFF, #0080CC);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detail-btn:hover {
+    background: linear-gradient(135deg, #0080CC, #006699);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 191, 255, 0.3);
+}
+
+/* 구간별 분석 */
+.detailed-analysis {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.analysis-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-title i {
+    color: #00BFFF;
+}
+
+.analysis-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.analysis-column {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 1.5rem;
+}
+
+.movie-analysis-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.movie-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.movie-color.original {
+    background: #00BFFF;
+}
+
+.movie-color.related {
+    background: #FF4444;
+}
+
+.analysis-segments {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.segment-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.segment-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(3px);
+}
+
+.segment-number {
+    background: linear-gradient(135deg, #00BFFF, #FF4444);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.segment-description {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #ffffff;
+}
+
+.no-analysis {
+    color: #cccccc;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
 /* LLM 설명 */
 .llm-explanation {
     margin-bottom: 3rem;
@@ -326,7 +477,9 @@
     padding: 2rem;
     color: white;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+    min-height: auto;
+    max-height: none;
 }
 
 .explanation-content:before {
@@ -347,6 +500,9 @@
     font-size: 1.1rem;
     line-height: 1.7;
     white-space: pre-line;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 /* 액션 버튼 */
@@ -455,6 +611,44 @@
         height: 300px;
     }
     
+    .chart-description {
+        font-size: 0.85rem;
+        padding: 0.6rem;
+    }
+    
+    .detail-btn {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.85rem;
+    }
+    
+    .analysis-comparison {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .analysis-column {
+        padding: 1.2rem;
+    }
+    
+    .movie-analysis-title {
+        font-size: 1rem;
+    }
+    
+    .segment-item {
+        padding: 0.6rem;
+        gap: 0.6rem;
+    }
+    
+    .segment-number {
+        width: 20px;
+        height: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .segment-description {
+        font-size: 0.85rem;
+    }
+    
     .action-buttons {
         flex-direction: column;
         align-items: center;
@@ -486,6 +680,25 @@
     
     .chart-section {
         padding: 1.5rem;
+    }
+    
+    .chart-description {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+    }
+    
+    .analysis-column {
+        padding: 1rem;
+    }
+    
+    .segment-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .segment-description {
+        font-size: 0.8rem;
     }
     
     .explanation-content {

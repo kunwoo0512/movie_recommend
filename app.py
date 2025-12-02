@@ -38,6 +38,7 @@ global_metadata = None
 global_models_loaded = False
 global_sentence_model = None  # 임베딩 모델 사전 로딩
 global_movies_data = None  # movies_dataset.json 데이터
+global_recommender = None  # 통합 추천 시스템
 
 def load_movies_dataset():
     """movies_dataset.json 로드"""
@@ -88,36 +89,46 @@ def load_models_on_startup():
         # 임베딩 모델도 서버 시작 시 미리 로딩
         from sentence_transformers import SentenceTransformer
         import torch
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(f"🤖 임베딩 모델 로딩 중... (device: {device})")
+        import os
+        
+        # PyTorch meta tensor 문제 해결을 위한 강제 설정
+        torch.cuda.is_available = lambda: False
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        
+        device = 'cpu'  # 강제로 CPU 사용
+        print(f"🤖 임베딩 모델 로딩 중... (device: {device}, 강제 CPU 모드)")
         
         try:
-            # meta tensor 문제 해결을 위해 CPU에서 먼저 로드
+            # meta tensor 문제 해결을 위해 CPU에서만 로드
+            print("🔄 SentenceBERT 모델을 CPU에서 로드 중...")
             global_sentence_model = SentenceTransformer(
                 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-                device='cpu'  # CPU에서 먼저 로드
+                device='cpu'  # 항상 CPU에서 로드
             )
-            
-            # GPU 사용 가능한 경우에만 GPU로 이동
-            if device == 'cuda':
-                try:
-                    global_sentence_model = global_sentence_model.to(device)
-                    print(f"✅ 임베딩 모델을 {device}로 이동 완료")
-                except Exception as e:
-                    print(f"⚠️ GPU 이동 실패, CPU 사용: {str(e)}")
-                    global_sentence_model = global_sentence_model.to('cpu')
-            else:
-                print("✅ 임베딩 모델 CPU에서 로드 완료")
+            # 모델을 명시적으로 CPU로 이동
+            global_sentence_model.to('cpu')
+            print("✅ 임베딩 모델 CPU에서 로드 완료")
                 
         except Exception as e:
             print(f"❌ 임베딩 모델 로드 실패: {str(e)}")
             # 폴백: 기본 모델 사용
             print("🔄 기본 모델로 재시도...")
-            global_sentence_model = SentenceTransformer(
-                'sentence-transformers/all-MiniLM-L6-v2',
-                device='cpu'
-            )
-            print("✅ 기본 임베딩 모델 로드 완료")
+            try:
+                global_sentence_model = SentenceTransformer(
+                    'all-MiniLM-L6-v2',
+                    device='cpu'
+                )
+                global_sentence_model.to('cpu')
+                print("✅ 기본 임베딩 모델 로드 완료")
+            except Exception as e2:
+                print(f"❌ 기본 모델도 실패: {str(e2)}")
+                # 가장 단순한 모델 시도
+                global_sentence_model = SentenceTransformer(
+                    'sentence-transformers/all-MiniLM-L6-v2',
+                    device='cpu'
+                )
+                global_sentence_model.to('cpu')
+                print("✅ 최소 임베딩 모델 로드 완료")
         
         global_models_loaded = True
         load_time = time.time() - start_time
@@ -140,6 +151,23 @@ def load_models_on_startup():
         import traceback
         traceback.print_exc()
         global_models_loaded = False
+
+def init_recommender():
+    """통합 추천 시스템 초기화"""
+    global global_recommender
+    try:
+        if global_recommender is None:
+            print("🔄 통합 추천 시스템 초기화 중...")
+            from weighted_movie_finder import MovieSimilarityRecommender
+            global_recommender = MovieSimilarityRecommender(enable_llm=True)
+            global_recommender.load_data()  # 데이터 미리 로드
+            print("✅ 통합 추천 시스템 초기화 완료!")
+        return global_recommender
+    except Exception as e:
+        print(f"❌ 추천 시스템 초기화 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 # 활성 프로세스들을 추적하기 위한 리스트 (간단한 버전)
 active_processes = []
@@ -855,26 +883,40 @@ def serve_poster(filename):
 @app.route('/api/related-movies', methods=['POST'])
 def get_related_movies():
     """관련영화 추천 API"""
+    print("🚀 API 엔드포인트 호출됨!")
     try:
         data = request.get_json()
+        print(f"📦 받은 데이터: {data}")
         movie_title = data.get('title', '').strip()
         movie_year = data.get('year', '')
         top_k = data.get('top_k', 6)
         
+        # 가중치 값들 받기 (기본값: 0.8, 0.1, 0.1)
+        plot_weight = float(data.get('plot_weight', 0.8))
+        flow_weight = float(data.get('flow_weight', 0.1))
+        genre_weight = float(data.get('genre_weight', 0.1))
+        
+        print(f"🔍 API 요청 - 영화: {movie_title}, 가중치: plot={plot_weight}, flow={flow_weight}, genre={genre_weight}")
+        
         if not movie_title:
             return jsonify({'error': '영화 제목이 필요합니다'}), 400
         
-        # weighted_movie_finder 사용
+        # 캐싱 문제 해결을 위해 매번 새로운 recommender 생성 (임시)
+        print("🔄 새로운 추천시스템 인스턴스 생성중...")
         from weighted_movie_finder import MovieSimilarityRecommender
-        
         recommender = MovieSimilarityRecommender(enable_llm=True)
         
-        # 가중치는 기본값 사용 (0.8, 0.1, 0.1)
+        # 사용자가 설정한 가중치로 추천
+        print(f"📊 가중치 적용된 추천 시작...")
         similar_movies = recommender.get_similar_movies(
             movie_title=movie_title,
             movie_year=movie_year,
+            w_plot=plot_weight,
+            w_flow=flow_weight,
+            w_genre=genre_weight,
             top_k=top_k
         )
+        print(f"✅ 추천 완료: {len(similar_movies)}개 영화")
         
         if not similar_movies:
             return jsonify({'movies': [], 'message': '관련 영화를 찾을 수 없습니다'})
@@ -923,6 +965,13 @@ def movie_compare():
         related_title = request.args.get('related', '').strip()
         related_year = request.args.get('related_year', '')
         
+        # 가중치 파라미터 가져오기 (기본값: 0.8, 0.1, 0.1)
+        plot_weight = float(request.args.get('plot_weight', 0.8))
+        flow_weight = float(request.args.get('flow_weight', 0.1))
+        genre_weight = float(request.args.get('genre_weight', 0.1))
+        
+        print(f"🔍 비교 페이지 - 가중치: plot={plot_weight}, flow={flow_weight}, genre={genre_weight}")
+        
         if not original_title or not related_title:
             return render_template('error.html', 
                                  error_message='비교할 영화 정보가 부족합니다.')
@@ -957,6 +1006,9 @@ def movie_compare():
             similar_movies = recommender.get_similar_movies(
                 movie_title=original_title,
                 movie_year=original_year,
+                w_plot=plot_weight,
+                w_flow=flow_weight,
+                w_genre=genre_weight,
                 top_k=20  # 더 많이 찾아서 해당 영화를 찾을 확률 높이기
             )
             
@@ -981,7 +1033,8 @@ def movie_compare():
         explainer = LLMRecommendationExplainer()
         llm_explanation = ""
         if explainer.available:
-            weights = {'plot': 0.8, 'flow': 0.1, 'genre': 0.1}
+            # 실제 사용된 가중치 사용
+            weights = {'plot': plot_weight, 'flow': flow_weight, 'genre': genre_weight}
             llm_explanation = explainer.explain_recommendation(
                 original_movie, related_movie, 
                 similarity_analysis, weights
@@ -991,7 +1044,8 @@ def movie_compare():
                              original=original_movie,
                              related=related_movie,
                              similarity=similarity_analysis,
-                             llm_explanation=llm_explanation)
+                             llm_explanation=llm_explanation,
+                             weights={'plot': plot_weight, 'flow': flow_weight, 'genre': genre_weight})
         
     except Exception as e:
         print(f"영화 비교 페이지 오류: {e}")

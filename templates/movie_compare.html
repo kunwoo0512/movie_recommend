@@ -121,7 +121,6 @@
                             <div class="card-content">
                                 <h3>줄거리 유사도</h3>
                                 <div class="score">{{ "%.1f"|format((similarity.plot or 0) * 100) }}%</div>
-                                <div class="weight">가중치: 80%</div>
                             </div>
                         </div>
 
@@ -132,7 +131,6 @@
                             <div class="card-content">
                                 <h3>흐름곡선 유사도</h3>
                                 <div class="score">{{ "%.1f"|format((similarity.flow or 0) * 100) }}%</div>
-                                <div class="weight">가중치: 10%</div>
                             </div>
                         </div>
 
@@ -143,7 +141,6 @@
                             <div class="card-content">
                                 <h3>장르 유사도</h3>
                                 <div class="score">{{ "%.1f"|format((similarity.genre or 0) * 100) }}%</div>
-                                <div class="weight">가중치: 10%</div>
                             </div>
                         </div>
                     </div>
@@ -154,8 +151,68 @@
                             <i class="fas fa-wave-square"></i>
                             스토리 흐름곡선 비교
                         </h3>
+                        <p class="chart-description">
+                            💡 <strong>흐름곡선 쉽게 이해하기</strong><br>
+                            이 그래프는 영화를 보는 동안 느끼는 감정/긴장감의 높낮이를 보여줍니다.<br>
+                            <span class="description-point">📈 <strong>높을수록:</strong> 긴장되고 몰입되는 장면 (액션, 클라이맥스)</span><br>
+                            <span class="description-point">📉 <strong>낮을수록:</strong> 차분하고 여유로운 장면 (일상, 대화)</span><br>
+                            ℹ️ 비슷한 패턴의 영화는 비슷한 감정적 경험을 제공할 것입니다.
+                        </p>
                         <div class="chart-container">
                             <canvas id="flowChart"></canvas>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="detail-btn" onclick="toggleDetailedAnalysis()">
+                                <i class="fas fa-eye"></i>
+                                <span id="detailBtnText">자세히 보기</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 자세한 구간별 분석 -->
+                        <div class="detailed-analysis" id="detailedAnalysis" style="display: none;">
+                            <h4 class="analysis-title">
+                                <i class="fas fa-chart-line"></i>
+                                구간별 상세 분석
+                            </h4>
+                            <div class="analysis-comparison">
+                                <div class="analysis-column">
+                                    <h5 class="movie-analysis-title">
+                                        <span class="movie-color original"></span>
+                                        {{ original.title }}
+                                    </h5>
+                                    <div class="analysis-segments">
+                                        {% if original.detailed_analysis %}
+                                            {% for segment in original.detailed_analysis %}
+                                                <div class="segment-item">
+                                                    <span class="segment-number">{{ loop.index }}</span>
+                                                    <span class="segment-description">{{ segment }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="no-analysis">구간별 분석 정보가 없습니다.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="analysis-column">
+                                    <h5 class="movie-analysis-title">
+                                        <span class="movie-color related"></span>
+                                        {{ related.title }}
+                                    </h5>
+                                    <div class="analysis-segments">
+                                        {% if related.detailed_analysis %}
+                                            {% for segment in related.detailed_analysis %}
+                                                <div class="segment-item">
+                                                    <span class="segment-number">{{ loop.index }}</span>
+                                                    <span class="segment-description">{{ segment }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="no-analysis">구간별 분석 정보가 없습니다.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -180,10 +237,6 @@
                     <button class="action-btn primary" onclick="history.back()">
                         <i class="fas fa-arrow-left"></i>
                         돌아가기
-                    </button>
-                    <button class="action-btn secondary" onclick="shareComparison()">
-                        <i class="fas fa-share"></i>
-                        비교 결과 공유
                     </button>
                 </div>
             </div>
@@ -313,22 +366,20 @@
             });
         });
 
-        // 비교 결과 공유
-        function shareComparison() {
-            const originalTitle = "{{ original.title }}";
-            const relatedTitle = "{{ related.title }}";
-            const text = `"${originalTitle}"과 "${relatedTitle}" 영화 유사도 분석 결과를 확인해보세요!`;
+        // 자세한 분석 토글
+        function toggleDetailedAnalysis() {
+            const detailedAnalysis = document.getElementById('detailedAnalysis');
+            const btnText = document.getElementById('detailBtnText');
+            const btn = document.querySelector('.detail-btn');
             
-            if (navigator.share) {
-                navigator.share({
-                    title: `${originalTitle} vs ${relatedTitle} 비교`,
-                    text: text,
-                    url: window.location.href
-                });
+            if (detailedAnalysis.style.display === 'none') {
+                detailedAnalysis.style.display = 'block';
+                btnText.textContent = '접기';
+                btn.querySelector('i').className = 'fas fa-eye-slash';
             } else {
-                navigator.clipboard.writeText(text + ' ' + window.location.href).then(() => {
-                    alert('비교 결과 링크가 클립보드에 복사되었습니다!');
-                });
+                detailedAnalysis.style.display = 'none';
+                btnText.textContent = '자세히 보기';
+                btn.querySelector('i').className = 'fas fa-eye';
             }
         }
     </script>

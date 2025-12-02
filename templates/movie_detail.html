@@ -56,9 +56,17 @@
                         <div class="movie-rating">
                             <div class="rating-badge">
                                 <i class="fas fa-star"></i>
-                                <span>{{ "%.1f"|format(movie.score * 10) }}/10</span>
+                                {% if movie.llm_analysis and movie.llm_analysis.score %}
+                                    <span>{{ movie.llm_analysis.score }}/10</span>
+                                {% else %}
+                                    <span>{{ "%.1f"|format(movie.score * 10) }}/10</span>
+                                {% endif %}
                             </div>
-                            <p class="rating-label">유사도 점수</p>
+                            {% if movie.llm_analysis and movie.llm_analysis.score %}
+                                <p class="rating-label">LLM 분석 점수</p>
+                            {% else %}
+                                <p class="rating-label">유사도 점수</p>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -109,10 +117,6 @@
                                 <i class="fas fa-search"></i>
                                 비슷한 영화 더 찾기
                             </button>
-                            <button class="action-btn secondary" onclick="shareMovie()">
-                                <i class="fas fa-share"></i>
-                                공유하기
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -126,6 +130,45 @@
                     <i class="fas fa-film"></i>
                     이런 영화는 어떠세요?
                 </h2>
+                
+                <!-- 가중치 조절 섹션 -->
+                <div class="weight-controls">
+                    <h3 class="weight-title">
+                        <i class="fas fa-sliders-h"></i>
+                        관련영화 탐색 요건
+                    </h3>
+                    <div class="weight-sliders">
+                        <div class="weight-item plot">
+                            <label for="plotWeight">줄거리</label>
+                            <div class="slider-container">
+                                <input type="range" id="plotWeight" min="0" max="1" step="0.1" value="0.8" class="weight-slider plot">
+                                <span class="weight-value" id="plotValue">80%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="weight-item flow">
+                            <label for="flowWeight">흐름곡선</label>
+                            <div class="slider-container">
+                                <input type="range" id="flowWeight" min="0" max="1" step="0.1" value="0.1" class="weight-slider flow">
+                                <span class="weight-value" id="flowValue">10%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="weight-item genre">
+                            <label for="genreWeight">장르</label>
+                            <div class="slider-container">
+                                <input type="range" id="genreWeight" min="0" max="1" step="0.1" value="0.1" class="weight-slider genre">
+                                <span class="weight-value" id="genreValue">10%</span>
+                            </div>
+                        </div>
+                        
+                        <button class="apply-weights-btn" onclick="applyWeightsAndReload()">
+                            <i class="fas fa-sync-alt"></i>
+                            변경
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="related-movies-grid" id="relatedMoviesGrid">
                     <!-- 관련영화가 동적으로 로드됩니다 -->
                     <div class="loading-related">
@@ -143,10 +186,121 @@
     </div>
 
     <script>
-        // 페이지 로드시 관련영화 로드
+        // 페이지 로드시 관련영화 로드 및 가중치 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            loadRelatedMovies();
+            initializeWeightSliders();
+            // 기본 가중치로 관련영화 로드 (캐싱 방지)
+            loadRelatedMoviesWithWeights(0.8, 0.1, 0.1);
         });
+
+        // 가중치 슬라이더 초기화
+        function initializeWeightSliders() {
+            const plotSlider = document.getElementById('plotWeight');
+            const flowSlider = document.getElementById('flowWeight');
+            const genreSlider = document.getElementById('genreWeight');
+            
+            // 슬라이더 값 변경 시 표시값 업데이트
+            plotSlider.addEventListener('input', function() {
+                document.getElementById('plotValue').textContent = Math.round(this.value * 100) + '%';
+            });
+            
+            flowSlider.addEventListener('input', function() {
+                document.getElementById('flowValue').textContent = Math.round(this.value * 100) + '%';
+            });
+            
+            genreSlider.addEventListener('input', function() {
+                document.getElementById('genreValue').textContent = Math.round(this.value * 100) + '%';
+            });
+        }
+
+        // 가중치 적용 및 관련영화 재로드
+        function applyWeightsAndReload() {
+            const plotWeight = document.getElementById('plotWeight').value;
+            const flowWeight = document.getElementById('flowWeight').value;
+            const genreWeight = document.getElementById('genreWeight').value;
+            
+            // 가중치 합이 1이 되도록 정규화
+            const total = parseFloat(plotWeight) + parseFloat(flowWeight) + parseFloat(genreWeight);
+            if (total === 0) {
+                alert('최소 하나의 가중치는 0보다 커야 합니다.');
+                return;
+            }
+            
+            const normalizedPlot = (parseFloat(plotWeight) / total);
+            const normalizedFlow = (parseFloat(flowWeight) / total);
+            const normalizedGenre = (parseFloat(genreWeight) / total);
+            
+            // 현재 가중치 업데이트
+            currentWeights.plot = normalizedPlot;
+            currentWeights.flow = normalizedFlow;
+            currentWeights.genre = normalizedGenre;
+            
+            // 버튼 상태 변경
+            const btn = document.querySelector('.apply-weights-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 적용 중...';
+            btn.disabled = true;
+            
+            // 로딩 상태로 변경
+            document.getElementById('relatedMoviesGrid').innerHTML = `
+                <div class="loading-related">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>새로운 가중치로 영화를 찾는 중...</span>
+                </div>
+            `;
+            
+            // 새 가중치로 관련영화 로드
+            loadRelatedMoviesWithWeights(normalizedPlot, normalizedFlow, normalizedGenre);
+        }
+
+        // 가중치를 적용한 관련영화 로드
+        function loadRelatedMoviesWithWeights(plotWeight, flowWeight, genreWeight) {
+            const movieTitle = "{{ movie.title }}";
+            const movieYear = "{{ movie.year }}";
+            
+            console.log(`🔍 API 호출: ${movieTitle} (${movieYear}) - 가중치: plot=${plotWeight}, flow=${flowWeight}, genre=${genreWeight}`);
+            
+            fetch('/api/related-movies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: movieTitle,
+                    year: movieYear,
+                    top_k: 6,
+                    plot_weight: plotWeight,
+                    flow_weight: flowWeight,
+                    genre_weight: genreWeight
+                })
+            })
+            .then(response => {
+                console.log('📡 API 응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 API 응답 데이터:', data);
+                displayRelatedMovies(data.movies || []);
+                
+                // 버튼 상태 복원
+                const btn = document.querySelector('.apply-weights-btn');
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> 변경';
+                btn.disabled = false;
+            })
+            .catch(error => {
+                console.error('관련영화 로드 실패:', error);
+                document.getElementById('relatedMoviesGrid').innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>관련영화를 불러올 수 없습니다.</span>
+                    </div>
+                `;
+                
+                // 버튼 상태 복원
+                const btn = document.querySelector('.apply-weights-btn');
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> 변경';
+                btn.disabled = false;
+            });
+        }
 
         // 관련영화 로드
         function loadRelatedMovies() {
@@ -194,7 +348,7 @@
             }
 
             const moviesHTML = movies.map(movie => `
-                <div class="related-movie-card" onclick="goToComparison('${movie.title}', '${movie.year}')">
+                <div class="related-movie-card" onclick="compareMovies('${movie.title}', '${movie.year}')">
                     <div class="related-poster">
                         ${movie.poster_url ? 
                             `<img src="${movie.poster_url}" alt="${movie.title}" />` : 
@@ -215,12 +369,20 @@
             grid.innerHTML = moviesHTML;
         }
 
-        // 영화 비교 페이지로 이동
-        function goToComparison(relatedTitle, relatedYear) {
+        // 현재 가중치 저장 변수
+        let currentWeights = {
+            plot: 0.8,
+            flow: 0.1,
+            genre: 0.1
+        };
+
+        // 관련영화 비교 페이지로 이동
+        function compareMovies(relatedTitle, relatedYear) {
             const originalTitle = "{{ movie.title }}";
             const originalYear = "{{ movie.year }}";
             
-            const url = `/compare?original=${encodeURIComponent(originalTitle)}&original_year=${encodeURIComponent(originalYear)}&related=${encodeURIComponent(relatedTitle)}&related_year=${encodeURIComponent(relatedYear)}`;
+            // 현재 가중치를 URL에 포함
+            const url = `/compare?original=${encodeURIComponent(originalTitle)}&original_year=${encodeURIComponent(originalYear)}&related=${encodeURIComponent(relatedTitle)}&related_year=${encodeURIComponent(relatedYear)}&plot_weight=${currentWeights.plot}&flow_weight=${currentWeights.flow}&genre_weight=${currentWeights.genre}`;
             window.location.href = url;
         }
 
@@ -228,26 +390,6 @@
         function searchSimilar() {
             const movieTitle = "{{ movie.title }}";
             window.location.href = `/?search=${encodeURIComponent(movieTitle)}`;
-        }
-
-        // 영화 공유
-        function shareMovie() {
-            const movieTitle = "{{ movie.title }}";
-            const movieYear = "{{ movie.year }}";
-            const text = `"${movieTitle} (${movieYear})" - MovieFinder에서 추천받은 영화입니다!`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: movieTitle,
-                    text: text,
-                    url: window.location.href
-                });
-            } else {
-                // 클립보드에 복사
-                navigator.clipboard.writeText(text + ' ' + window.location.href).then(() => {
-                    alert('링크가 클립보드에 복사되었습니다!');
-                });
-            }
         }
     </script>
 </body>

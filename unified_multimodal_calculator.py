@@ -37,37 +37,55 @@ class UnifiedMultimodalCalculator:
         try:
             print("[System] 통합 멀티모달 시스템 초기화 중...")
             
+            # PyTorch meta tensor 문제 해결을 위한 강제 설정
+            import torch
+            import os
+            
+            # CUDA 완전 비활성화
+            torch.cuda.is_available = lambda: False
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''
+            
             # SentenceBERT 모델 로드
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            print(f"[Device] 디바이스: {device}")
+            device = 'cpu'  # 강제로 CPU 사용
+            print(f"[Device] 디바이스: {device} (강제 CPU 모드)")
             
             try:
-                # meta tensor 문제 해결을 위해 CPU에서 먼저 로드
+                # meta tensor 문제 해결을 위해 CPU에서만 로드
+                print("[Model] SentenceBERT 모델을 CPU에서 로드 중...")
+                
+                # 환경변수로 CPU 강제 설정
+                import sentence_transformers
+                
                 self.sbert_model = SentenceTransformer(
                     'paraphrase-multilingual-MiniLM-L12-v2', 
-                    device='cpu'  # CPU에서 먼저 로드
+                    device='cpu'  # 항상 CPU에서 로드
                 )
                 
-                # GPU 사용 가능한 경우에만 GPU로 이동
-                if device == 'cuda':
-                    try:
-                        self.sbert_model = self.sbert_model.to(device)
-                        print(f"[Model] SentenceBERT 모델을 {device}로 이동 완료")
-                    except Exception as e:
-                        print(f"[Warning] GPU 이동 실패, CPU 사용: {str(e)}")
-                        self.sbert_model = self.sbert_model.to('cpu')
-                else:
-                    print("[Model] SentenceBERT 모델 CPU에서 로드 완료")
+                # 모델을 명시적으로 CPU로 이동
+                self.sbert_model.to('cpu')
+                
+                print("[Model] SentenceBERT 모델 CPU에서 로드 완료")
                     
             except Exception as e:
                 print(f"[Error] SentenceBERT 모델 로드 실패: {str(e)}")
                 # 폴백: 더 가벼운 모델 사용
                 print("[Fallback] 기본 모델로 재시도...")
-                self.sbert_model = SentenceTransformer(
-                    'all-MiniLM-L6-v2',
-                    device='cpu'
-                )
-                print("[Model] 기본 SentenceBERT 모델 로드 완료")
+                try:
+                    self.sbert_model = SentenceTransformer(
+                        'all-MiniLM-L6-v2',
+                        device='cpu'
+                    )
+                    self.sbert_model.to('cpu')
+                    print("[Model] 기본 SentenceBERT 모델 로드 완료")
+                except Exception as e2:
+                    print(f"[Error] 기본 모델도 실패: {str(e2)}")
+                    # 가장 단순한 모델 시도
+                    self.sbert_model = SentenceTransformer(
+                        'sentence-transformers/all-MiniLM-L6-v2',
+                        device='cpu'
+                    )
+                    self.sbert_model.to('cpu')
+                    print("[Model] 최소 SentenceBERT 모델 로드 완료")
             
             # 영화 메타데이터 로드 (흐름/장르용)
             metadata_path = os.path.join(self.data_dir, "separated_embeddings", "movie_metadata.jsonl")
@@ -374,10 +392,10 @@ class UnifiedMultimodalCalculator:
         
         return results
     
-    def calculate_weighted_similarity(self, movie_title: str, w_plot: float = 0.65, 
-                                    w_flow: float = 0.25, w_genre: float = 0.10, 
+    def calculate_weighted_similarity(self, movie_title: str, w_plot: float = 0.8, 
+                                    w_flow: float = 0.1, w_genre: float = 0.1, 
                                     top_k: int = 10):
-        """가중치 기반 유사 영화 검색"""
+        """가중치 기반 유사 영화 검색 - 모든 후보에 대해 직접 계산"""
         if not self.initialized:
             if not self.load_all_data():
                 raise RuntimeError("시스템 초기화 실패")
@@ -389,85 +407,58 @@ class UnifiedMultimodalCalculator:
         if target_movie is None:
             raise ValueError(f"영화를 찾을 수 없습니다: '{movie_title}'")
         
-        print(f"🎯 대상 영화: {target_movie['title']} ({target_movie['year']})")
+        print(f"🎯 대상 영화: {target_movie['title']} ({target_movie['year']}) - 인덱스: {target_idx}")
         
-        # 각 모달리티별 유사 영화 검색 (많이 가져와서 합집합 생성)
-        plot_candidates = self.search_plot_similarity(target_idx, 50) if w_plot > 0 else []
-        flow_candidates = self.search_flow_similarity(target_idx, 50) if w_flow > 0 else []
-        genre_candidates = self.search_genre_similarity(target_idx, 50) if w_genre > 0 else []
+        # 대상 영화의 임베딩 벡터들 가져오기
+        target_plot_vec = self.plot_index.reconstruct(target_idx)
+        target_flow_vec = self.flow_index.reconstruct(target_idx)
+        target_genre_vec = self.genre_index.reconstruct(target_idx)
         
-        print(f"[Candidates] 후보 영화: Plot({len(plot_candidates)}), Flow({len(flow_candidates)}), Genre({len(genre_candidates)})")
+        print(f"[Embeddings] 대상 영화 임베딩 벡터 준비 완료")
+        print(f"[Debug] 벡터 크기: plot={target_plot_vec.shape}, flow={target_flow_vec.shape}, genre={target_genre_vec.shape}")
         
-        # 모든 후보 영화들의 합집합 생성
-        all_candidates = {}
+        # 모든 영화에 대해 직접 유사도 계산
+        all_movies_scores = []
+        total_movies = len(self.movie_metadata)
         
-        # 줄거리 후보 추가
-        for movie in plot_candidates:
-            key = movie['index']
-            all_candidates[key] = {
-                'index': movie['index'],
-                'title': movie['title'],
-                'year': movie['year'],
-                'plot_similarity': movie['similarity'],
-                'flow_similarity': 0.0,
-                'genre_similarity': 0.0
-            }
+        print(f"[Calculating] 전체 {total_movies}개 영화에 대해 유사도 계산 중...")
         
-        # 흐름곡선 후보 추가/업데이트
-        for movie in flow_candidates:
-            key = movie['index']
-            if key in all_candidates:
-                all_candidates[key]['flow_similarity'] = movie['similarity']
-            else:
-                all_candidates[key] = {
-                    'index': movie['index'],
-                    'title': movie['title'],
-                    'year': movie['year'],
-                    'plot_similarity': 0.0,
-                    'flow_similarity': movie['similarity'],
-                    'genre_similarity': 0.0
-                }
-        
-        # 장르 후보 추가/업데이트
-        for movie in genre_candidates:
-            key = movie['index']
-            if key in all_candidates:
-                all_candidates[key]['genre_similarity'] = movie['similarity']
-            else:
-                all_candidates[key] = {
-                    'index': movie['index'],
-                    'title': movie['title'],
-                    'year': movie['year'],
-                    'plot_similarity': 0.0,
-                    'flow_similarity': 0.0,
-                    'genre_similarity': movie['similarity']
-                }
-        
-        # 가중치 기반 최종 점수 계산
-        total_weight = w_plot + w_flow + w_genre
-        final_results = []
-        
-        for candidate in all_candidates.values():
+        for i in range(total_movies):
+            if i == target_idx:  # 자기 자신 제외
+                continue
+                
+            # 각 모달리티 유사도 직접 계산
+            candidate_plot_vec = self.plot_index.reconstruct(i)
+            candidate_flow_vec = self.flow_index.reconstruct(i)
+            candidate_genre_vec = self.genre_index.reconstruct(i)
+            
+            # 코사인 유사도 계산 (내적 - 정규화된 벡터이므로)
+            plot_similarity = float(np.dot(target_plot_vec, candidate_plot_vec))
+            flow_similarity = float(np.dot(target_flow_vec, candidate_flow_vec))
+            genre_similarity = float(np.dot(target_genre_vec, candidate_genre_vec))
+            
+            # 가중치 적용한 최종 점수
+            total_weight = w_plot + w_flow + w_genre
             weighted_score = (
-                w_plot * candidate['plot_similarity'] +
-                w_flow * candidate['flow_similarity'] +
-                w_genre * candidate['genre_similarity']
+                w_plot * plot_similarity +
+                w_flow * flow_similarity +
+                w_genre * genre_similarity
             ) / total_weight
             
-            # 메타데이터 추가
-            movie_meta = self.movie_metadata[candidate['index']]
-            plot_meta = self.plot_metadata[candidate['index']]
+            # 메타데이터와 함께 저장
+            movie_meta = self.movie_metadata[i]
+            plot_meta = self.plot_metadata[i]
             
-            final_results.append({
-                'rank': 0,  # 나중에 설정
-                'title': candidate['title'],
-                'year': candidate['year'],
+            all_movies_scores.append({
+                'index': i,
+                'title': movie_meta['title'],
+                'year': movie_meta['year'],
                 'director': movie_meta['director'],
                 'similarity_score': weighted_score,
                 'component_scores': {
-                    'plot': candidate['plot_similarity'],
-                    'flow': candidate['flow_similarity'],
-                    'genre': candidate['genre_similarity']
+                    'plot': plot_similarity,
+                    'flow': flow_similarity,
+                    'genre': genre_similarity
                 },
                 'weights_used': {
                     'plot': w_plot / total_weight,
@@ -480,16 +471,25 @@ class UnifiedMultimodalCalculator:
                 'poster': movie_meta.get('poster', '')
             })
         
-        # 최종 점수로 정렬 및 순위 부여
-        final_results.sort(key=lambda x: x['similarity_score'], reverse=True)
-        for i, movie in enumerate(final_results[:top_k]):
+        # 최종 점수로 정렬
+        all_movies_scores.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        # 상위 top_k개 선택 및 순위 부여
+        final_results = all_movies_scores[:top_k]
+        for i, movie in enumerate(final_results):
             movie['rank'] = i + 1
         
-        overlapping = sum(1 for c in all_candidates.values() 
-                         if c['plot_similarity'] > 0 and c['flow_similarity'] > 0 and c['genre_similarity'] > 0)
-        print(f"🎯 최종 결과: {len(final_results)}개 후보, {overlapping}개 모든 모달리티 점수 보유")
+        print(f"✅ 계산 완료: 총 {len(all_movies_scores)}개 후보 중 상위 {len(final_results)}개 선택")
+        print(f"📊 점수 범위: {final_results[-1]['similarity_score']:.4f} ~ {final_results[0]['similarity_score']:.4f}")
         
-        return final_results[:top_k]
+        # 상위 3개 결과의 상세 정보 출력
+        print(f"[Top 3 Results]")
+        for i, movie in enumerate(final_results[:3]):
+            comp = movie['component_scores']
+            print(f"  {i+1}. {movie['title']} ({movie['year']}) - 최종점수: {movie['similarity_score']:.4f}")
+            print(f"     세부점수: plot={comp['plot']:.3f}, flow={comp['flow']:.3f}, genre={comp['genre']:.3f}")
+        
+        return final_results
 
 # Factory function
 def get_weighted_calculator(data_dir: str = "data"):

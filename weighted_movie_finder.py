@@ -86,7 +86,7 @@ class LLMRecommendationExplainer:
                     {"role": "system", "content": "당신은 영화 추천 전문가입니다. 주어진 유사도 분석 결과를 바탕으로 간결하고 구체적인 추천 이유를 한국어로 설명해주세요."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=150,
+                max_tokens=300,  # 토큰 수를 늘려서 텍스트가 잘리지 않도록 함
                 temperature=0.3
             )
             
