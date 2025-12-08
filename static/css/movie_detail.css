@@ -1,0 +1,734 @@
+/* 영화 상세 페이지 전용 스타일 */
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #764ba2;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    transition: background 0.3s ease;
+}
+
+.nav-link:hover {
+    background: rgba(118, 75, 162, 0.1);
+}
+
+/* 상세 페이지 메인 컨텐츠 */
+.detail-content {
+    flex: 1;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* 브레드크럼 */
+.breadcrumb {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    transition: background 0.3s ease;
+}
+
+.back-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.breadcrumb-separator {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-query {
+    color: rgba(255, 255, 255, 0.9);
+    font-style: italic;
+}
+
+/* 영화 상세 카드 */
+.movie-detail-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 600px;
+}
+
+.movie-poster-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+.movie-poster-large {
+    width: 200px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.movie-poster-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+.movie-poster-large .poster-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* 포스터 로드 실패시 스타일 */
+.movie-poster-large.no-poster::after {
+    content: '\f008'; /* Font Awesome film icon */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 4rem;
+    color: #666;
+}
+
+.movie-rating {
+    text-align: center;
+}
+
+.rating-badge {
+    background: #764ba2;
+    color: white;
+    padding: 0.8rem 1.2rem;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.rating-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.movie-info-section {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* 영화 제목 섹션 */
+.movie-title-section {
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 1.5rem;
+}
+
+.movie-title {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.movie-metadata {
+    display: flex;
+    gap: 2rem;
+}
+
+.movie-year,
+.movie-director {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.movie-year i,
+.movie-director i {
+    color: #764ba2;
+}
+
+/* LLM 분석 섹션 */
+.llm-analysis {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+}
+
+.llm-analysis h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+}
+
+.analysis-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.llm-score {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+}
+
+.score-label {
+    font-weight: 500;
+}
+
+.score-value {
+    background: white;
+    color: #764ba2;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-weight: bold;
+}
+
+.analysis-text {
+    line-height: 1.6;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 줄거리 섹션 */
+.plot-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.plot-section h3 i {
+    color: #764ba2;
+}
+
+.plot-text {
+    line-height: 1.7;
+    color: #555;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 액션 버튼들 */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.action-btn.primary {
+    background: #764ba2;
+    color: white;
+    flex: 1;
+}
+
+.action-btn.primary:hover {
+    background: #5a3a7a;
+    transform: translateY(-2px);
+}
+
+.action-btn.secondary {
+    background: transparent;
+    color: #764ba2;
+    border: 2px solid #764ba2;
+}
+
+.action-btn.secondary:hover {
+    background: #764ba2;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .detail-content {
+        padding: 1rem;
+    }
+
+    .movie-detail-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .movie-poster-section {
+        padding: 1.5rem;
+    }
+
+    .movie-poster-large {
+        width: 150px;
+        height: 225px;
+        font-size: 3rem;
+    }
+
+    .movie-info-section {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .movie-title {
+        font-size: 2rem;
+    }
+
+    .movie-metadata {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .llm-analysis {
+        padding: 1.5rem;
+    }
+
+    .llm-score {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .breadcrumb {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+
+    .nav {
+        display: none;
+    }
+}
+
+/* 관련영화 추천 섹션 */
+.related-movies-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    margin: 2rem 0;
+    padding: 2rem 0;
+    border-radius: 15px;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.section-title i {
+    color: #764ba2;
+}
+
+.related-movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.related-movie-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.related-movie-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.related-poster {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.related-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.poster-placeholder {
+    color: #666;
+    font-size: 2rem;
+}
+
+.related-info {
+    padding: 1rem;
+}
+
+.related-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.related-year {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.similarity-score {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #764ba2;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.similarity-score i {
+    font-size: 0.8rem;
+}
+
+.loading-related,
+.error-message,
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.loading-related i,
+.error-message i,
+.no-results i {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #764ba2;
+}
+
+.error-message i {
+    color: #e74c3c;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+    .related-movies-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 0 0.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .related-poster {
+        height: 150px;
+    }
+    
+    .related-info {
+        padding: 0.75rem;
+    }
+}
+
+/* 가중치 조절 섹션 */
+.weight-controls {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.weight-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.weight-title i {
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.weight-sliders {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    align-items: end;
+}
+
+.weight-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.weight-item label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.weight-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid #333;
+}
+
+.weight-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.weight-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.weight-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 줄거리 슬라이더 - 파란색 */
+.weight-slider.plot::-webkit-slider-thumb {
+    background: #4285f4;
+}
+
+.weight-slider.plot::-webkit-slider-track {
+    background: linear-gradient(to right, rgba(66, 133, 244, 0.3), #4285f4);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+.weight-slider.plot::-moz-range-thumb {
+    background: #4285f4;
+}
+
+.weight-slider.plot::-moz-range-track {
+    background: linear-gradient(to right, rgba(66, 133, 244, 0.3), #4285f4);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+/* 흐름곡선 슬라이더 - 빨간색 */
+.weight-slider.flow::-webkit-slider-thumb {
+    background: #ff4444;
+}
+
+.weight-slider.flow::-webkit-slider-track {
+    background: linear-gradient(to right, rgba(255, 68, 68, 0.3), #ff4444);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+.weight-slider.flow::-moz-range-thumb {
+    background: #ff4444;
+}
+
+.weight-slider.flow::-moz-range-track {
+    background: linear-gradient(to right, rgba(255, 68, 68, 0.3), #ff4444);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+/* 장르 슬라이더 - 연두색 */
+.weight-slider.genre::-webkit-slider-thumb {
+    background: #4caf50;
+}
+
+.weight-slider.genre::-webkit-slider-track {
+    background: linear-gradient(to right, rgba(76, 175, 80, 0.3), #4caf50);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+.weight-slider.genre::-moz-range-thumb {
+    background: #4caf50;
+}
+
+.weight-slider.genre::-moz-range-track {
+    background: linear-gradient(to right, rgba(76, 175, 80, 0.3), #4caf50);
+    border: 1px solid #333;
+    border-radius: 3px;
+}
+
+.weight-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* 각 슬라이더별 값 색상 */
+.weight-item.plot .weight-value {
+    color: #4285f4;
+}
+
+.weight-item.flow .weight-value {
+    color: #ff4444;
+}
+
+.weight-item.genre .weight-value {
+    color: #4caf50;
+}
+
+.apply-weights-btn {
+    background: linear-gradient(135deg, #6a5acd, #9370db);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    justify-self: center;
+    align-self: end;
+    box-shadow: 0 3px 10px rgba(106, 90, 205, 0.3);
+}
+
+.apply-weights-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(106, 90, 205, 0.5);
+    background: linear-gradient(135deg, #9370db, #6a5acd);
+}
+
+.apply-weights-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 모바일에서 가중치 조절 */
+@media (max-width: 768px) {
+    .weight-controls {
+        padding: 1.2rem;
+    }
+    
+    .weight-sliders {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+    }
+    
+    .weight-title {
+        font-size: 1rem;
+    }
+    
+    .apply-weights-btn {
+        justify-self: stretch;
+        margin-top: 0.5rem;
+    }
+}

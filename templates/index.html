@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 추천 시스템</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-film"></i>
+                <span>MovieFinder</span>
+            </div>
+        </header>
+
+        <!-- 메인 검색 영역 -->
+        <main class="main-content">
+            <div class="search-section">
+                <h1 class="title">어떤 영화를 찾고 계신가요?</h1>
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input" 
+                            placeholder="어떤 영화를 찾고 계신가요?"
+                            autocomplete="off"
+                        >
+                        <button id="searchBtn" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
+                </div>
+            </div>
+
+            <!-- 로딩 상태 -->
+            <div id="loadingState" class="loading-state hidden">
+                <div class="spinner"></div>
+                <p>영화를 검색하고 있습니다...</p>
+            </div>
+
+            <!-- 검색 결과 -->
+            <div id="searchResults" class="search-results hidden">
+                <div class="results-header">
+                    <h2 id="resultsTitle">검색 결과</h2>
+                    <p id="resultsCount"></p>
+                </div>
+                <div id="moviesList" class="movies-list"></div>
+            </div>
+
+            <!-- 오류 메시지 -->
+            <div id="errorMessage" class="error-message hidden">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p id="errorText"></p>
+                <button id="retryBtn" class="retry-btn">다시 시도</button>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
+        </footer>
+    </div>
+
+    <!-- LLM 설명 모달 -->
+    <div id="explanationModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">추천 이유</h3>
+                <button id="closeModal" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="modalLoading" class="modal-loading">
+                    <div class="spinner-small"></div>
+                    <p>설명을 생성하고 있습니다...</p>
+                </div>
+                <div id="modalExplanation" class="modal-explanation hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

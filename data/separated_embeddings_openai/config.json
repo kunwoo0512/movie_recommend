@@ -1,0 +1,6 @@
+{
+  "embedding_model": "text-embedding-3-small",
+  "embedding_dim": 1536,
+  "total_movies": 741,
+  "created_at": "2025-11-18 19:53:48"
+}

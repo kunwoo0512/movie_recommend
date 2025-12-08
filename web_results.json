@@ -1,0 +1,164 @@
+{
+  "query": "꿈과 현실을 오가는 영화",
+  "total_results": 12,
+  "llm_filtered": true,
+  "timestamp": "2025-11-22 01:20:29",
+  "movies": [
+    {
+      "rank": 1,
+      "title": "The Science of Sleep",
+      "year": "2006",
+      "director": "Michel Gondry",
+      "plot": "",
+      "score": 0.606648862361908,
+      "poster_url": "/static/posters/The_Science_of_Sleep.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"The Science of Sleep\"은 꿈과 현실 사이에서 오가는 주인공의 이야기를 다룹니다. 줄거리에서 주인공이 꿈 속에서 현실과의 경계가 희미해지며 현실에서의 문제들을 꿈 속에서 해결하려고 하는 모습이 잘 표현되어 있습니다."
+      }
+    },
+    {
+      "rank": 2,
+      "title": "Interstellar",
+      "year": "2014",
+      "director": "Christopher Nolan",
+      "plot": "",
+      "score": 0.499538391828537,
+      "poster_url": "/static/posters/Interstellar.jpg",
+      "llm_analysis": {
+        "score": 10,
+        "reason": "영화 Interstellar는 검색어 \"꿈과 현실을 오가는 영화\"의 의도와 완벽하게 부합합니다. 영화는 우주 여행을 통해 인류의 미래를 탐색하면서 꿈, 현실, 시간, 우주 등 다양한 개념을 다룹니다. 특히 주인공이 가족과의 이별, 우주 여행 중 겪는 시간의 흐름 등을 통해 꿈과 현실 사이에서 갈등하는 모습을 섬세하게 그려냅니다."
+      }
+    },
+    {
+      "rank": 3,
+      "title": "The Matrix Resurrections",
+      "year": "2021",
+      "director": "Lana Wachowski",
+      "plot": "",
+      "score": 0.4961703419685364,
+      "poster_url": "/static/posters/The_Matrix_Resurrections.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "\"The Matrix Resurrections\"의 줄거리는 검색어 \"꿈과 현실을 오가는 영화\"와 밀접하게 관련되어 있습니다. 영화는 주인공이 현실과 가상 현실인 메트릭스 사이를 오가며 자아를 찾아가는 과정을 다룹니다. 특히 메트릭스 안에서 주인공이 자신의 존재 이유와 진실을 탐구하며 꿈과 현실의 경계를 허무는 내용이 포함되어 있습니다."
+      }
+    },
+    {
+      "rank": 4,
+      "title": "The City of Lost Children",
+      "year": "1995",
+      "director": "Marc Caro, Jean-Pierre Jeunet",
+      "plot": "",
+      "score": 0.4753819704055786,
+      "poster_url": "/static/posters/The_City_of_Lost_Children.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"The City of Lost Children\"은 검색어 \"꿈과 현실을 오가는 영화\"와 관련이 있습니다. 영화는 현실과 꿈의 경계가 모호한 판타지 세계를 다루고 있으며, 주요 캐릭터 중 하나인 아이리스는 꿈 속에서 현실을 경험하며 성장하는 과정을 보여줍니다."
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Ready Player One",
+      "year": "2018",
+      "director": "Steven Spielberg",
+      "plot": "",
+      "score": 0.47383707761764526,
+      "poster_url": "/static/posters/Ready_Player_One.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Ready Player One\"은 가상현실 세계와 현실 세계 사이를 오가는 주인공의 이야기를 다룹니다. 줄거리에서는 주인공이 가상현실 게임 속에서 퍼즐을 풀며 현실세계의 문제를 해결하는 모험을 그리고 있습니다."
+      }
+    },
+    {
+      "rank": 6,
+      "title": "Inception",
+      "year": "2010",
+      "director": "Christopher Nolan",
+      "plot": "",
+      "score": 0.4675073027610779,
+      "poster_url": "/static/posters/Inception.jpg",
+      "llm_analysis": {
+        "score": 10,
+        "reason": "영화 \"Inception\"은 꿈과 현실을 오가는 주요 테마를 다루고 있습니다. 줄거리에서 주인공이 꿈 속에서 꿈을 만들어 사람들의 의식 속에 침투하는 작전을 수행하는 내용이 나타납니다. 특히 영화 전체가 현실과 꿈 사이에서 구분이 모호해지며 현실과 상상 속의 세계를 오가는 모험을 그려내기 때문에 검색어의 의도와 완벽하게 부합합니다."
+      }
+    },
+    {
+      "rank": 7,
+      "title": "Pulp Fiction",
+      "year": "1994",
+      "director": "Quentin Tarantino",
+      "plot": "",
+      "score": 0.46057558059692383,
+      "poster_url": "/static/posters/Pulp_Fiction.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Pulp Fiction\"은 꿈과 현실을 오가는 캐릭터들의 이야기를 다루고 있습니다. 특히 영화 내에서 비선형적인 구조로 여러 이야기가 꼬리를 물며 전개되는데, 이는 꿈과 현실을 오가는 듯한 느낌을 주고 있습니다."
+      }
+    },
+    {
+      "rank": 8,
+      "title": "Doctor Strange in the Multiverse of Madness",
+      "year": "2022",
+      "director": "Sam Raimi",
+      "plot": "",
+      "score": 0.4552144706249237,
+      "poster_url": "/static/posters/Doctor_Strange_in_the_Multiverse_of_Madness.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 Doctor Strange in the Multiverse of Madness는 검색어 \"꿈과 현실을 오가는 영화\"의 의도와 부합합니다. 영화는 다차원의 현실과 꿈 사이를 오가는 주인공 닥터 스트레인지의 모험을 다룹니다."
+      }
+    },
+    {
+      "rank": 9,
+      "title": "Weapons",
+      "year": "2025",
+      "director": "Zach Cregger",
+      "plot": "",
+      "score": 0.4552115201950073,
+      "poster_url": "/static/posters/Weapons.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Weapons\"의 줄거리는 검색어 \"꿈과 현실을 오가는 영화\"의 의도와 일치합니다. 영화 속 주인공은 가상 현실 세계에서 실제로 일어나는 일들을 경험하게 되면서 꿈과 현실 사이를 오가는 경험을 하게 됩니다. 특히 \"주인공이 현실과 가상 현실 사이에서 갈등을 겪으면서 자아를 찾아가는 과정\"이 영화의 핵심 플롯이며, 이는 검색어의 요구사항과 부합합니다."
+      }
+    },
+    {
+      "rank": 10,
+      "title": "Joker: Folie à Deux",
+      "year": "2024",
+      "director": "Todd Phillips",
+      "plot": "",
+      "score": 0.4521261751651764,
+      "poster_url": "/static/posters/Joker:_Folie_à_Deux.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Joker: Folie à Deux\"의 줄거리는 검색어 \"꿈과 현실을 오가는 영화\"의 의도와 매우 잘 부합합니다. 영화는 주인공이 현실과 꿈 사이를 오가며 정체성에 대한 고뇌를 겪는 내용을 다룹니다."
+      }
+    },
+    {
+      "rank": 11,
+      "title": "Suzume",
+      "year": "2022",
+      "director": "Makoto Shinkai",
+      "plot": "",
+      "score": 0.44734254479408264,
+      "poster_url": "/static/posters/Suzume.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Suzume\"의 줄거리에서 주인공이 꿈 속에서 현실과 마주하게 되는 상황이 두드러지게 나타납니다. 특히 \"꿈 속에서의 세계와 현실 세계가 점차 얽혀가며 주인공의 정체성에 대한 의문을 안겨주는\" 내용은 검색어 \"꿈과 현실을 오가는 영화\"와 밀접한 연관이 있습니다."
+      }
+    },
+    {
+      "rank": 12,
+      "title": "Now You See Me",
+      "year": "2013",
+      "director": "Louis Leterrier",
+      "plot": "",
+      "score": 0.44651347398757935,
+      "poster_url": "/static/posters/Now_You_See_Me.jpg",
+      "llm_analysis": {
+        "score": 9,
+        "reason": "영화 \"Now You See Me\"은 검색어 \"꿈과 현실을 오가는 영화\"의 의도와 부합합니다. 영화는 일루전과 마술을 주제로 하며, 주인공들이 꿈과 현실을 오가면서 대담한 마술을 선보입니다. 특히 영화 속 마술 공연은 현실과 꿈 사이에서 경계를 허물며 관객을 미스터리한 세계로 이끕니다."
+      }
+    }
+  ]
+}

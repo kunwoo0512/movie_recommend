@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ movie.title }} - 영화 상세 정보</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/movie_detail.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-film"></i>
+                    <span>MovieFinder</span>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>홈으로</span>
+                    </a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- 영화 상세 정보 -->
+        <main class="detail-content">
+            <div class="detail-container">
+                <!-- 뒤로가기 -->
+                <div class="breadcrumb">
+                    <a href="javascript:history.back()" class="back-link">
+                        <i class="fas fa-arrow-left"></i>
+                        검색 결과로 돌아가기
+                    </a>
+                    {% if query %}
+                    <span class="breadcrumb-separator">→</span>
+                    <span class="search-query">"{{ query }}" 검색 결과</span>
+                    {% endif %}
+                </div>
+
+                <!-- 영화 정보 카드 -->
+                <div class="movie-detail-card">
+                    <div class="movie-poster-section">
+                        <div class="movie-poster-large">
+                            {% if movie.poster_url %}
+                                <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" onerror="this.style.display='none'; this.parentElement.classList.add('no-poster');">
+                            {% else %}
+                                <div class="poster-fallback">
+                                    <i class="fas fa-film"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="movie-rating">
+                            <div class="rating-badge">
+                                <i class="fas fa-star"></i>
+                                {% if movie.llm_analysis and movie.llm_analysis.score %}
+                                    <span>{{ movie.llm_analysis.score }}/10</span>
+                                {% else %}
+                                    <span>{{ "%.1f"|format(movie.score * 10) }}/10</span>
+                                {% endif %}
+                            </div>
+                            {% if movie.llm_analysis and movie.llm_analysis.score %}
+                                <p class="rating-label">LLM 분석 점수</p>
+                            {% else %}
+                                <p class="rating-label">유사도 점수</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="movie-info-section">
+                        <div class="movie-title-section">
+                            <h1 class="movie-title">{{ movie.title }}</h1>
+                            <div class="movie-metadata">
+                                <span class="movie-year">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ movie.year }}
+                                </span>
+                                <span class="movie-director">
+                                    <i class="fas fa-user"></i>
+                                    {{ movie.director }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- LLM 분석 -->
+                        {% if movie.llm_analysis and movie.llm_analysis.reason %}
+                        <div class="llm-analysis">
+                            <h3>
+                                <i class="fas fa-lightbulb"></i>
+                                왜 이 영화가 추천되었을까요?
+                            </h3>
+                            <div class="analysis-content">
+                                <div class="llm-score">
+                                    <span class="score-label">LLM 분석 점수:</span>
+                                    <span class="score-value">{{ movie.llm_analysis.score }}/10</span>
+                                </div>
+                                <p class="analysis-text">{{ movie.llm_analysis.reason }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 줄거리 -->
+                        <div class="plot-section">
+                            <h3>
+                                <i class="fas fa-book"></i>
+                                줄거리
+                            </h3>
+                            <p class="plot-text">{{ movie.plot or '줄거리 정보가 없습니다.' }}</p>
+                        </div>
+
+                        <!-- 액션 버튼들 -->
+                        <div class="action-buttons">
+                            <button class="action-btn primary" onclick="searchSimilar()">
+                                <i class="fas fa-search"></i>
+                                비슷한 영화 더 찾기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 관련영화 추천 섹션 -->
+        <section class="related-movies-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-film"></i>
+                    이런 영화는 어떠세요?
+                </h2>
+                
+                <!-- 가중치 조절 섹션 -->
+                <div class="weight-controls">
+                    <h3 class="weight-title">
+                        <i class="fas fa-sliders-h"></i>
+                        관련영화 탐색 요건
+                    </h3>
+                    <div class="weight-sliders">
+                        <div class="weight-item plot">
+                            <label for="plotWeight">줄거리</label>
+                            <div class="slider-container">
+                                <input type="range" id="plotWeight" min="0" max="1" step="0.1" value="0.8" class="weight-slider plot">
+                                <span class="weight-value" id="plotValue">80%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="weight-item flow">
+                            <label for="flowWeight">흐름곡선</label>
+                            <div class="slider-container">
+                                <input type="range" id="flowWeight" min="0" max="1" step="0.1" value="0.1" class="weight-slider flow">
+                                <span class="weight-value" id="flowValue">10%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="weight-item genre">
+                            <label for="genreWeight">장르</label>
+                            <div class="slider-container">
+                                <input type="range" id="genreWeight" min="0" max="1" step="0.1" value="0.1" class="weight-slider genre">
+                                <span class="weight-value" id="genreValue">10%</span>
+                            </div>
+                        </div>
+                        
+                        <button class="apply-weights-btn" onclick="applyWeightsAndReload()">
+                            <i class="fas fa-sync-alt"></i>
+                            변경
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="related-movies-grid" id="relatedMoviesGrid">
+                    <!-- 관련영화가 동적으로 로드됩니다 -->
+                    <div class="loading-related">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>관련영화를 찾는 중...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
+        </footer>
+    </div>
+
+    <script>
+        // 페이지 로드시 관련영화 로드 및 가중치 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeWeightSliders();
+            // 기본 가중치로 관련영화 로드 (캐싱 방지)
+            loadRelatedMoviesWithWeights(0.8, 0.1, 0.1);
+        });
+
+        // 가중치 슬라이더 초기화
+        function initializeWeightSliders() {
+            const plotSlider = document.getElementById('plotWeight');
+            const flowSlider = document.getElementById('flowWeight');
+            const genreSlider = document.getElementById('genreWeight');
+            
+            // 슬라이더 값 변경 시 표시값 업데이트
+            plotSlider.addEventListener('input', function() {
+                document.getElementById('plotValue').textContent = Math.round(this.value * 100) + '%';
+            });
+            
+            flowSlider.addEventListener('input', function() {
+                document.getElementById('flowValue').textContent = Math.round(this.value * 100) + '%';
+            });
+            
+            genreSlider.addEventListener('input', function() {
+                document.getElementById('genreValue').textContent = Math.round(this.value * 100) + '%';
+            });
+        }
+
+        // 가중치 적용 및 관련영화 재로드
+        function applyWeightsAndReload() {
+            const plotWeight = document.getElementById('plotWeight').value;
+            const flowWeight = document.getElementById('flowWeight').value;
+            const genreWeight = document.getElementById('genreWeight').value;
+            
+            // 가중치 합이 1이 되도록 정규화
+            const total = parseFloat(plotWeight) + parseFloat(flowWeight) + parseFloat(genreWeight);
+            if (total === 0) {
+                alert('최소 하나의 가중치는 0보다 커야 합니다.');
+                return;
+            }
+            
+            const normalizedPlot = (parseFloat(plotWeight) / total);
+            const normalizedFlow = (parseFloat(flowWeight) / total);
+            const normalizedGenre = (parseFloat(genreWeight) / total);
+            
+            // 현재 가중치 업데이트
+            currentWeights.plot = normalizedPlot;
+            currentWeights.flow = normalizedFlow;
+            currentWeights.genre = normalizedGenre;
+            
+            // 버튼 상태 변경
+            const btn = document.querySelector('.apply-weights-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 적용 중...';
+            btn.disabled = true;
+            
+            // 로딩 상태로 변경
+            document.getElementById('relatedMoviesGrid').innerHTML = `
+                <div class="loading-related">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>새로운 가중치로 영화를 찾는 중...</span>
+                </div>
+            `;
+            
+            // 새 가중치로 관련영화 로드
+            loadRelatedMoviesWithWeights(normalizedPlot, normalizedFlow, normalizedGenre);
+        }
+
+        // 가중치를 적용한 관련영화 로드
+        function loadRelatedMoviesWithWeights(plotWeight, flowWeight, genreWeight) {
+            const movieTitle = "{{ movie.title }}";
+            const movieYear = "{{ movie.year }}";
+            
+            console.log(`🔍 API 호출: ${movieTitle} (${movieYear}) - 가중치: plot=${plotWeight}, flow=${flowWeight}, genre=${genreWeight}`);
+            
+            fetch('/api/related-movies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: movieTitle,
+                    year: movieYear,
+                    top_k: 6,
+                    plot_weight: plotWeight,
+                    flow_weight: flowWeight,
+                    genre_weight: genreWeight
+                })
+            })
+            .then(response => {
+                console.log('📡 API 응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 API 응답 데이터:', data);
+                displayRelatedMovies(data.movies || []);
+                
+                // 버튼 상태 복원
+                const btn = document.querySelector('.apply-weights-btn');
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> 변경';
+                btn.disabled = false;
+            })
+            .catch(error => {
+                console.error('관련영화 로드 실패:', error);
+                document.getElementById('relatedMoviesGrid').innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>관련영화를 불러올 수 없습니다.</span>
+                    </div>
+                `;
+                
+                // 버튼 상태 복원
+                const btn = document.querySelector('.apply-weights-btn');
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> 변경';
+                btn.disabled = false;
+            });
+        }
+
+        // 관련영화 로드
+        function loadRelatedMovies() {
+            const movieTitle = "{{ movie.title }}";
+            const movieYear = "{{ movie.year }}";
+            
+            fetch('/api/related-movies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: movieTitle,
+                    year: movieYear,
+                    top_k: 6
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayRelatedMovies(data.movies || []);
+            })
+            .catch(error => {
+                console.error('관련영화 로드 실패:', error);
+                document.getElementById('relatedMoviesGrid').innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>관련영화를 불러올 수 없습니다.</span>
+                    </div>
+                `;
+            });
+        }
+
+        // 관련영화 표시
+        function displayRelatedMovies(movies) {
+            const grid = document.getElementById('relatedMoviesGrid');
+            
+            if (movies.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-film"></i>
+                        <span>관련영화를 찾을 수 없습니다.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const moviesHTML = movies.map(movie => `
+                <div class="related-movie-card" onclick="compareMovies('${movie.title}', '${movie.year}')">
+                    <div class="related-poster">
+                        ${movie.poster_url ? 
+                            `<img src="${movie.poster_url}" alt="${movie.title}" />` : 
+                            `<div class="poster-placeholder"><i class="fas fa-film"></i></div>`
+                        }
+                    </div>
+                    <div class="related-info">
+                        <h4 class="related-title">${movie.title}</h4>
+                        <p class="related-year">${movie.year}</p>
+                        <div class="similarity-score">
+                            <i class="fas fa-star"></i>
+                            <span>${(movie.similarity_score * 100).toFixed(1)}% 유사</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            grid.innerHTML = moviesHTML;
+        }
+
+        // 현재 가중치 저장 변수
+        let currentWeights = {
+            plot: 0.8,
+            flow: 0.1,
+            genre: 0.1
+        };
+
+        // 관련영화 비교 페이지로 이동
+        function compareMovies(relatedTitle, relatedYear) {
+            const originalTitle = "{{ movie.title }}";
+            const originalYear = "{{ movie.year }}";
+            
+            // 현재 가중치를 URL에 포함
+            const url = `/compare?original=${encodeURIComponent(originalTitle)}&original_year=${encodeURIComponent(originalYear)}&related=${encodeURIComponent(relatedTitle)}&related_year=${encodeURIComponent(relatedYear)}&plot_weight=${currentWeights.plot}&flow_weight=${currentWeights.flow}&genre_weight=${currentWeights.genre}`;
+            window.location.href = url;
+        }
+
+        // 비슷한 영화 검색
+        function searchSimilar() {
+            const movieTitle = "{{ movie.title }}";
+            window.location.href = `/?search=${encodeURIComponent(movieTitle)}`;
+        }
+    </script>
+</body>
+</html>

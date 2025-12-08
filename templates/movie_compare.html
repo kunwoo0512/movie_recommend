@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 비교 - {{ original.title }} vs {{ related.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/movie_compare.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-film"></i>
+                <span>MovieFinder</span>
+            </div>
+            <nav class="nav">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    홈으로
+                </a>
+                <a href="javascript:history.back()" class="nav-link">
+                    <i class="fas fa-arrow-left"></i>
+                    뒤로가기
+                </a>
+            </nav>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="main-content">
+            <div class="container">
+                <!-- 비교 제목 -->
+                <div class="compare-header">
+                    <h1 class="compare-title">
+                        <i class="fas fa-balance-scale"></i>
+                        영화 유사도 분석
+                    </h1>
+                    <p class="compare-subtitle">두 영화가 어떤 점에서 유사한지 분석해보세요</p>
+                </div>
+
+                <!-- 영화 정보 비교 -->
+                <div class="movies-comparison">
+                    <!-- 원본 영화 -->
+                    <div class="movie-section original">
+                        <div class="movie-label">원본 영화</div>
+                        <div class="movie-card">
+                            <div class="movie-poster">
+                                {% if original.poster_url %}
+                                    <img src="{{ original.poster_url }}" alt="{{ original.title }}" />
+                                {% else %}
+                                    <div class="poster-placeholder">
+                                        <i class="fas fa-film"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">{{ original.title }}</h3>
+                                <p class="movie-year">{{ original.year }}</p>
+                                <p class="movie-director">감독: {{ original.director or '정보 없음' }}</p>
+                                <div class="movie-genres">
+                                    {% set original_genres = original.genres.keys() | list if original.genres else [] %}
+                                    {% for genre in original_genres[:3] %}
+                                        <span class="genre-tag">{{ genre }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VS 표시 -->
+                    <div class="vs-indicator">
+                        <div class="vs-circle">
+                            <span>VS</span>
+                        </div>
+                    </div>
+
+                    <!-- 추천 영화 -->
+                    <div class="movie-section related">
+                        <div class="movie-label">추천 영화</div>
+                        <div class="movie-card">
+                            <div class="movie-poster">
+                                {% if related.poster_url %}
+                                    <img src="{{ related.poster_url }}" alt="{{ related.title }}" />
+                                {% else %}
+                                    <div class="poster-placeholder">
+                                        <i class="fas fa-film"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">{{ related.title }}</h3>
+                                <p class="movie-year">{{ related.year }}</p>
+                                <p class="movie-director">감독: {{ related.director or '정보 없음' }}</p>
+                                <div class="movie-genres">
+                                    {% set related_genres = related.genres.keys() | list if related.genres else [] %}
+                                    {% for genre in related_genres[:3] %}
+                                        <span class="genre-tag">{{ genre }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 유사도 분석 -->
+                <div class="similarity-analysis">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        유사도 분석 결과
+                    </h2>
+
+                    <!-- 유사도 점수 카드 -->
+                    <div class="similarity-cards">
+                        <div class="similarity-card plot">
+                            <div class="card-icon">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>줄거리 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.plot or 0) * 100) }}%</div>
+                            </div>
+                        </div>
+
+                        <div class="similarity-card flow">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>흐름곡선 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.flow or 0) * 100) }}%</div>
+                            </div>
+                        </div>
+
+                        <div class="similarity-card genre">
+                            <div class="card-icon">
+                                <i class="fas fa-masks-theater"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>장르 유사도</h3>
+                                <div class="score">{{ "%.1f"|format((similarity.genre or 0) * 100) }}%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 흐름곡선 비교 차트 -->
+                    <div class="chart-section">
+                        <h3 class="chart-title">
+                            <i class="fas fa-wave-square"></i>
+                            스토리 흐름곡선 비교
+                        </h3>
+                        <p class="chart-description">
+                            💡 <strong>흐름곡선 쉽게 이해하기</strong><br>
+                            이 그래프는 영화를 보는 동안 느끼는 감정/긴장감의 높낮이를 보여줍니다.<br>
+                            <span class="description-point">📈 <strong>높을수록:</strong> 긴장되고 몰입되는 장면 (액션, 클라이맥스)</span><br>
+                            <span class="description-point">📉 <strong>낮을수록:</strong> 차분하고 여유로운 장면 (일상, 대화)</span><br>
+                            ℹ️ 비슷한 패턴의 영화는 비슷한 감정적 경험을 제공할 것입니다.
+                        </p>
+                        <div class="chart-container">
+                            <canvas id="flowChart"></canvas>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="detail-btn" onclick="toggleDetailedAnalysis()">
+                                <i class="fas fa-eye"></i>
+                                <span id="detailBtnText">자세히 보기</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 자세한 구간별 분석 -->
+                        <div class="detailed-analysis" id="detailedAnalysis" style="display: none;">
+                            <h4 class="analysis-title">
+                                <i class="fas fa-chart-line"></i>
+                                구간별 상세 분석
+                            </h4>
+                            <div class="analysis-comparison">
+                                <div class="analysis-column">
+                                    <h5 class="movie-analysis-title">
+                                        <span class="movie-color original"></span>
+                                        {{ original.title }}
+                                    </h5>
+                                    <div class="analysis-segments">
+                                        {% if original.detailed_analysis %}
+                                            {% for segment in original.detailed_analysis %}
+                                                <div class="segment-item">
+                                                    <span class="segment-number">{{ loop.index }}</span>
+                                                    <span class="segment-description">{{ segment }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="no-analysis">구간별 분석 정보가 없습니다.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="analysis-column">
+                                    <h5 class="movie-analysis-title">
+                                        <span class="movie-color related"></span>
+                                        {{ related.title }}
+                                    </h5>
+                                    <div class="analysis-segments">
+                                        {% if related.detailed_analysis %}
+                                            {% for segment in related.detailed_analysis %}
+                                                <div class="segment-item">
+                                                    <span class="segment-number">{{ loop.index }}</span>
+                                                    <span class="segment-description">{{ segment }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="no-analysis">구간별 분석 정보가 없습니다.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LLM 분석 설명 -->
+                {% if llm_explanation %}
+                <div class="llm-explanation">
+                    <h2 class="section-title">
+                        <i class="fas fa-robot"></i>
+                        AI 분석 결과
+                    </h2>
+                    <div class="explanation-content">
+                        <div class="explanation-text">
+                            {{ llm_explanation }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 액션 버튼 -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="history.back()">
+                        <i class="fas fa-arrow-left"></i>
+                        돌아가기
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2025 MovieFinder. AI 기반 영화 추천 시스템</p>
+        </footer>
+    </div>
+
+    <script>
+        // 흐름곡선 차트 그리기
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('flowChart').getContext('2d');
+            
+            // 흐름곡선 데이터 (JSON에서 가져오기) - 없으면 기본값 사용
+            let originalFlow = {{ original.flow_curve | tojson | safe }};
+            let relatedFlow = {{ related.flow_curve | tojson | safe }};
+            
+            // 데이터가 없는 경우 기본 더미 데이터 생성
+            if (!originalFlow || originalFlow === null || !Array.isArray(originalFlow)) {
+                originalFlow = [3, 4, 6, 8, 7, 9, 8, 6, 4, 2];  // 기본 흐름곡선
+            }
+            if (!relatedFlow || relatedFlow === null || !Array.isArray(relatedFlow)) {
+                relatedFlow = [2, 5, 7, 6, 8, 9, 7, 5, 3, 1];   // 기본 흐름곡선
+            }
+            
+            // 데이터 포인트 생성 (0-100% 범위)
+            const maxLength = Math.max(originalFlow.length, relatedFlow.length);
+            const labels = Array.from({length: maxLength}, 
+                                    (_, i) => `${Math.round((i / (maxLength - 1)) * 100)}%`);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '{{ original.title }}',
+                            data: originalFlow,
+                            borderColor: '#00BFFF',  // 하늘색 (Deep Sky Blue)
+                            backgroundColor: 'rgba(0, 191, 255, 0.15)',
+                            borderWidth: 4,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#00BFFF',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        },
+                        {
+                            label: '{{ related.title }}',
+                            data: relatedFlow,
+                            borderColor: '#FF4444',  // 빨간색 (Bright Red)
+                            backgroundColor: 'rgba(255, 68, 68, 0.15)',
+                            borderWidth: 4,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#FF4444',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '스토리 전개에 따른 감정/긴장도 변화',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            color: '#ffffff'  // 제목을 흰색으로
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff',  // 범례 텍스트를 흰색으로
+                                font: {
+                                    size: 14,
+                                    weight: '600'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: '감정/긴장도 (1-10)',
+                                color: '#ffffff'  // Y축 제목을 흰색으로
+                            },
+                            ticks: {
+                                color: '#ffffff'  // Y축 눈금을 흰색으로
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'  // 그리드를 연한 흰색으로
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '스토리 진행률',
+                                color: '#ffffff'  // X축 제목을 흰색으로
+                            },
+                            ticks: {
+                                color: '#ffffff'  // X축 눈금을 흰색으로
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'  // 그리드를 연한 흰색으로
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        });
+
+        // 자세한 분석 토글
+        function toggleDetailedAnalysis() {
+            const detailedAnalysis = document.getElementById('detailedAnalysis');
+            const btnText = document.getElementById('detailBtnText');
+            const btn = document.querySelector('.detail-btn');
+            
+            if (detailedAnalysis.style.display === 'none') {
+                detailedAnalysis.style.display = 'block';
+                btnText.textContent = '접기';
+                btn.querySelector('i').className = 'fas fa-eye-slash';
+            } else {
+                detailedAnalysis.style.display = 'none';
+                btnText.textContent = '자세히 보기';
+                btn.querySelector('i').className = 'fas fa-eye';
+            }
+        }
+    </script>
+</body>
+</html>
