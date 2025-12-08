@@ -786,7 +786,7 @@ def explain_movie(movie_title):
 
 @app.route('/movie/<int:movie_rank>')
 def movie_detail(movie_rank):
-    """영화 상세 정보 페이지"""
+    """영화 상세 정보 페이지 (순번 기반 - 레거시)"""
     try:
         # 검색 결과에서 영화 정보 로드
         web_results_path = Path('web_results.json')
@@ -820,6 +820,77 @@ def movie_detail(movie_rank):
         
     except Exception as e:
         print(f"[예외] 영화 상세 조회 오류: {e}")
+        return render_template('error.html', message='오류가 발생했습니다.')
+
+@app.route('/movie/<title>/<year>')
+def movie_detail_by_title(title, year):
+    """영화 상세 정보 페이지 (제목과 연도 기반)"""
+    try:
+        # URL 디코딩
+        import urllib.parse
+        decoded_title = urllib.parse.unquote(title)
+        decoded_year = urllib.parse.unquote(year)
+        
+        print(f"🎬 영화 상세정보 요청: {decoded_title} ({decoded_year})")
+        
+        # movies_dataset에서 직접 영화 정보 찾기
+        full_movie_data = find_movie_data(decoded_title, decoded_year)
+        if not full_movie_data:
+            return render_template('error.html', message=f'영화를 찾을 수 없습니다: {decoded_title} ({decoded_year})')
+        
+        # 영화 데이터 준비
+        movie = {
+            'title': full_movie_data.get('title', decoded_title),
+            'year': full_movie_data.get('year', decoded_year),
+            'director': full_movie_data.get('director', '정보 없음'),
+            'plot': full_movie_data.get('plot', '줄거리 정보가 없습니다.'),
+            'flow_curve': full_movie_data.get('flow_curve', []),
+            'genres': full_movie_data.get('genres', {}),
+            'detailed_analysis': full_movie_data.get('detailed_analysis', []),
+            'llm_analysis': full_movie_data.get('llm_analysis', {}),
+            'score': full_movie_data.get('score', 0.0)
+        }
+        
+        # web_results.json에서 LLM 분석 데이터 찾기 (검색 결과가 있다면)
+        web_results_path = Path('web_results.json')
+        if web_results_path.exists():
+            try:
+                with open(web_results_path, 'r', encoding='utf-8') as f:
+                    results = json.load(f)
+                
+                # 검색 결과에서 해당 영화 찾기
+                for result_movie in results.get('movies', []):
+                    if (result_movie.get('title', '').strip().lower() == decoded_title.strip().lower() and
+                        str(result_movie.get('year', '')).strip() == decoded_year.strip()):
+                        
+                        print(f"✅ 검색 결과에서 LLM 분석 데이터 발견: {decoded_title}")
+                        
+                        # 검색 결과의 LLM 분석 데이터로 업데이트
+                        if result_movie.get('llm_analysis'):
+                            movie['llm_analysis'] = result_movie['llm_analysis']
+                            print(f"🤖 LLM 분석 점수: {result_movie['llm_analysis'].get('score', 'N/A')}")
+                        
+                        # 검색 결과의 score로 업데이트 (있다면)
+                        if 'score' in result_movie:
+                            movie['score'] = result_movie['score']
+                        
+                        break
+                        
+            except Exception as e:
+                print(f"⚠️ web_results.json 읽기 오류: {e}")
+        
+        # 포스터 URL 생성
+        poster_path = full_movie_data.get('poster', '')
+        if poster_path:
+            poster_filename = poster_path.replace('\\', '/').split('/')[-1]
+            movie['poster_url'] = f"/assets/posters/{poster_filename}"
+        else:
+            movie['poster_url'] = None
+        
+        return render_template('movie_detail.html', movie=movie, query=f"{decoded_title} ({decoded_year})")
+        
+    except Exception as e:
+        print(f"[예외] 영화 상세 조회 오류 (제목 기반): {e}")
         return render_template('error.html', message='오류가 발생했습니다.')
 
 @app.route('/explanation/<movie_title>')

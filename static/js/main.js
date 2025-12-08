@@ -532,9 +532,28 @@ function createMovieCard(movie, rank) {
     return card;
 }
 
-// 영화 상세 페이지로 이동
+// 영화 상세 페이지로 이동 (제목과 연도 기반)
 function goToMovieDetail(rank) {
-    window.location.href = `/movie/${rank}`;
+    // 어떤 결과 배열을 사용할지 결정 (스트리밍 우선)
+    const resultsArray = 
+        (currentSearchResults && currentSearchResults.movies) || 
+        streamingResults;
+    
+    if (!resultsArray || resultsArray.length < rank) {
+        console.error('영화 데이터를 찾지 못했습니다.', {
+            currentSearchResults,
+            streamingResults,
+            rank
+        });
+        return;
+    }
+    
+    const movie = resultsArray[rank - 1];
+    const title = encodeURIComponent(movie.title || 'Unknown');
+    const year = encodeURIComponent(movie.year || 'Unknown');
+    
+    // 제목과 연도 기반 URL로 이동
+    window.location.href = `/movie/${title}/${year}`;
 }
 
 // LLM 설명 모달 표시 (수정: JSON 데이터에서 직접 가져오기)
