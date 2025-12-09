@@ -26,10 +26,14 @@
 
 # 검색 결과 예시
 <img width="569" height="272" alt="image" src="https://github.com/user-attachments/assets/514ef419-3f14-4619-87c9-16d9bc84358d" />
+
+
 # 영화 상세 정보 페이지 예시
 <img width="569" height="295" alt="image" src="https://github.com/user-attachments/assets/12af1c4c-1072-47a3-913f-4deef5c3f39d" />
 <img width="569" height="285" alt="image" src="https://github.com/user-attachments/assets/930dc3f6-46dc-4251-b4ef-ab5fd304ed31" />
 <img width="569" height="178" alt="image" src="https://github.com/user-attachments/assets/e43d7eb4-905e-46a0-96b9-a45df3aa7d24" />
+
+
 # 비교/분석 페이지 예시
 <img width="569" height="254" alt="image" src="https://github.com/user-attachments/assets/ee7146cd-227c-4a18-99a3-43b17dd39886" />
 <img width="569" height="255" alt="image" src="https://github.com/user-attachments/assets/bd56d0f6-1a72-4151-bd1f-524e41e98710" />
