@@ -40,3 +40,7 @@
 <img width="569" height="255" alt="image" src="https://github.com/user-attachments/assets/552a547e-ef34-4744-a298-c14e628c0948" />
 <img width="569" height="193" alt="image" src="https://github.com/user-attachments/assets/9af37256-1dbe-4864-bf5e-85ce439c19e2" />
 <img width="569" height="101" alt="image" src="https://github.com/user-attachments/assets/4deec5b2-5f2b-4c53-9d98-2b7340cc890c" />
+
+
+# 결론
+Sentence-BERT 모델을 활용한 줄거리 임베딩을 통해 사용자의 의미적·문맥적 검색어에 대응하는 영화 추천이 가능해졌다. 일례로 "꿈과 현실을 오가는 영화"와 같은 다소 추상적인 검색어도 효과적으로 처리하여 검색 결과로 메트릭스, 인셉션 등의 영화를 반환하는 것을 확인하였다. 또한 설득력을 높이기 위해 추천 이유를 제공하여 사용자의 이해도와 신뢰도를 향상시켰다. 
