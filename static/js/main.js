@@ -358,6 +358,7 @@ async function handleStreamingSearch(query) {
                 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = '';
                 
                 function readStream() {
                     reader.read().then(({ done, value }) => {
@@ -375,15 +376,21 @@ async function handleStreamingSearch(query) {
                         }
                         
                         const chunk = decoder.decode(value);
-                        const lines = chunk.split('\n');
+                        buffer += chunk;
+                        
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || ''; // 마지막 불완전한 라인은 버퍼에 보관
                         
                         lines.forEach(line => {
                             if (line.startsWith('data: ')) {
                                 try {
-                                    const data = JSON.parse(line.substring(6));
-                                    handleStreamingMessage(data);
+                                    const jsonStr = line.substring(6).trim();
+                                    if (jsonStr) {
+                                        const data = JSON.parse(jsonStr);
+                                        handleStreamingMessage(data);
+                                    }
                                 } catch (error) {
-                                    console.error('스트리밍 데이터 파싱 오류:', error);
+                                    console.error('스트리밍 데이터 파싱 오류:', error, 'Line:', line);
                                 }
                             }
                         });
