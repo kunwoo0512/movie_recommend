@@ -546,11 +546,12 @@ function goToMovieDetail(rank) {
         (currentSearchResults && currentSearchResults.movies) || 
         streamingResults;
     
-    if (!resultsArray || resultsArray.length < rank) {
+    if (!resultsArray || resultsArray.length === 0 || rank <= 0 || rank > resultsArray.length) {
         console.error('영화 데이터를 찾지 못했습니다.', {
             currentSearchResults,
             streamingResults,
-            rank
+            rank,
+            arrayLength: resultsArray ? resultsArray.length : 0
         });
         return;
     }
@@ -575,11 +576,19 @@ async function showExplanation(rank) {
         (currentSearchResults && currentSearchResults.movies) || 
         streamingResults;
     
-    if (!resultsArray || resultsArray.length < rank) {
+    console.log('설명 디버깅:', {
+        resultsArray: resultsArray,
+        arrayLength: resultsArray ? resultsArray.length : 0,
+        rank: rank,
+        validIndex: resultsArray && rank > 0 && rank <= resultsArray.length
+    });
+    
+    if (!resultsArray || resultsArray.length === 0 || rank <= 0 || rank > resultsArray.length) {
         console.error('설명에 사용할 영화 데이터를 찾지 못했습니다.', {
             currentSearchResults,
             streamingResults,
-            rank
+            rank,
+            arrayLength: resultsArray ? resultsArray.length : 0
         });
         modalTitle.textContent = '설명 오류';
         showModalExplanation('해당 영화의 설명 데이터를 찾을 수 없습니다.');
