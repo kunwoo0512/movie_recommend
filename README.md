@@ -5,7 +5,7 @@ pip install -r requirements.txt
 python app.py
 
 # 3. 브라우저에서 http://localhost:5000 접속
-.env파일을 생성하지 않을 경우 LLM 분석 기능이 작동하지 않습니다.
+.env파일에 open ai key설정을 하지 않을 경우 LLM 분석 기능은 작동하지 않습니다.
 
 # 연구 배경
  기존 OTT 서비스의 경우 블랙박스 알고리즘을 사용하여 내부적인 동작 방식은 숨긴 채 사
